@@ -31,6 +31,6 @@ In the editor, select the `setup` function → **Run**. Google will ask you to a
 - Reads only the `purchasing` Gmail label, every 10 min
 - One review card per email thread, regenerated as the thread evolves (idempotent)
 - PDFs parsed natively; text/CSV attachments inlined; xlsx/docs flagged on the card for a human
-- POs require the `amur1.1` memo tag; quotes/updates don't
+- POs require the `amur002` memo tag; quotes/updates don't
 - Writes ONLY the `pendingOrders` field in Firestore (updateMask) — can never touch orders/BOM/vendors
 - Chatter → no card. Unparseable-but-relevant → "NEEDS REVIEW" card. Nothing is ever silent-dropped except clear noise.

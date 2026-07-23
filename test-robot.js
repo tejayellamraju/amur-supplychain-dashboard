@@ -25,8 +25,8 @@ assert.deepStrictEqual(fromFs(toFs({a: null, b: true, c: 1.5, d: 0, e: '', f: []
                        {a: null, b: true, c: 1.5, d: 0, e: '', f: []});
 
 // amur tag regex
-assert.ok(CONFIG.PROJECT_TAG.test('Memo: amur1.1 — Quote # 12345'));
-assert.ok(CONFIG.PROJECT_TAG.test('AMUR 1.1 build'));
+assert.ok(CONFIG.PROJECT_TAG.test('Memo: amur002 — Quote # 12345'));
+assert.ok(CONFIG.PROJECT_TAG.test('AMUR 002 build'));
 assert.ok(!CONFIG.PROJECT_TAG.test('project zeta 2.0'));
 
 console.log('ALL ROBOT TESTS PASS');

@@ -18,7 +18,7 @@ var CONFIG = {
   LABEL: 'purchasing',
   PROJECT: 'amur-supplychain',
   EVERY_MINUTES: 10,
-  PROJECT_TAG: /amur\s*1\.1/i,      // PO memo tag; quotes/threads don't need it
+  PROJECT_TAG: /amur\s*002/i,       // PO memo tag; quotes/threads don't need it
   MODEL: 'claude-opus-4-8',
   MAX_THREAD_CHARS: 20000,          // per-thread body text cap sent to Claude
   OVERLAP_MS: 15 * 60 * 1000        // re-scan window; upsert is idempotent so overlap is safe
@@ -91,12 +91,12 @@ function extractWithClaude(threadText, docBlocks, data, existingCard, unparsed) 
   var orderList = (data.orders || []).filter(function (o) { return !o.deleted; })
     .map(function (o) { return (o.poNumber || '(no PO)') + ' | ' + o.vendor + ' | ' + o.stage; }).join('\n');
 
-  var system = 'You extract purchasing data from vendor email threads for the Amur 1.1 project dashboard.\n' +
+  var system = 'You extract purchasing data from vendor email threads for the Amur 002 project dashboard.\n' +
     'Company part numbers (BOM) — map extracted line items to these when they match by part number or description:\n' + bomList + '\n\n' +
     'Existing orders (to classify updates vs new orders):\n' + orderList + '\n\n' +
     'Rules:\n' +
     '- One judgment for the WHOLE thread: does its latest material state describe a new order, a quote, or an update (confirmed/shipped/tracking/delay/short-ship) to an existing order?\n' +
-    '- Official POs: only relevant if the memo contains the tag "amur1.1" (case-insensitive). POs with other project tags => kind "ignore".\n' +
+    '- Official POs: only relevant if the memo contains the tag "amur002" (case-insensitive). POs with other project tags => kind "ignore".\n' +
     '- Pure chatter with nothing material => kind "ignore".\n' +
     '- Clearly purchasing-related but unextractable => kind "unparseable" and summarize why.\n' +
     '- Never invent numbers. Unknown fields => empty string or 0. Unmatched lines => sku "".\n' +
