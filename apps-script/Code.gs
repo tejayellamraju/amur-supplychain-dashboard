@@ -96,10 +96,12 @@ function extractWithClaude(threadText, docBlocks, data, existingCard, unparsed) 
     'Existing orders (to classify updates vs new orders):\n' + orderList + '\n\n' +
     'Rules:\n' +
     '- One judgment for the WHOLE thread: does its latest material state describe a new order, a quote, or an update (confirmed/shipped/tracking/delay/short-ship) to an existing order?\n' +
+    '- Fourier part numbers: a number explicitly labeled "FP#", "FP #", or "Fourier P/N" IS the company part number — put it in the line\'s sku verbatim, whether or not it appears in the BOM list above. Any OTHER number near a line (the vendor\'s own SKU/catalog/model number) is NOT the sku.\n' +
+    '- If a line has no FP# label, still try to match it to a BOM part number by description; set sku to the matched BOM part number, else "".\n' +
     '- Official POs: only relevant if the memo contains the tag "amur002" (case-insensitive). POs with other project tags => kind "ignore".\n' +
     '- Pure chatter with nothing material => kind "ignore".\n' +
     '- Clearly purchasing-related but unextractable => kind "unparseable" and summarize why.\n' +
-    '- Never invent numbers. Unknown fields => empty string or 0. Unmatched lines => sku "".\n' +
+    '- Never invent numbers. Unknown fields => empty string or 0.\n' +
     '- Dates as YYYY-MM-DD.';
 
   var content = docBlocks.slice();
