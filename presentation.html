@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amur 002 Dashboard — Architecture</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Victor+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --yellow:#F5FD01; --black:#020202; --white:#F9F8F3;
+    --tan:#B49A75; --brown:#8A7A5C; --amber:#F9C733;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{
+    font-family:'Victor Mono',ui-monospace,monospace;
+    background:var(--black);color:var(--white);overflow:hidden;
+  }
+  .slide{
+    position:fixed;inset:0;display:none;flex-direction:column;
+    justify-content:center;padding:6vh 8vw;background:var(--white);color:var(--black);
+  }
+  .slide.active{display:flex}
+  .slide.dark{background:var(--black);color:var(--white)}
+  .kicker{font-size:1.1vw;letter-spacing:.3em;text-transform:uppercase;color:var(--brown);margin-bottom:2.2vh}
+  h1{font-size:5vw;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+  h2{font-size:3.2vw;font-weight:700;line-height:1.1;margin-bottom:3.5vh;letter-spacing:-.01em}
+  h2 .bar{background:var(--yellow);padding:0 .2em}
+  p,li{font-size:1.7vw;line-height:1.55}
+  ul{list-style:none;margin-top:1vh}
+  li{margin:1.3vh 0;padding-left:1.6em;position:relative}
+  li::before{content:"▸";position:absolute;left:0;color:var(--tan)}
+  li b{color:var(--black)}
+  .dark li b{color:var(--yellow)}
+  .lead{font-size:2.1vw;line-height:1.5;max-width:80%}
+  .big{font-size:2.6vw;line-height:1.4;font-weight:600}
+  .muted{color:var(--brown)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:4vw}
+  .card{border:2px solid var(--black);padding:2.4vh 1.8vw}
+  .dark .card{border-color:var(--tan)}
+  .card h3{font-size:1.8vw;margin-bottom:1.2vh}
+  .card p,.card li{font-size:1.3vw;line-height:1.45}
+  .card li{margin:.7vh 0}
+  /* flow diagram */
+  .flow{display:flex;flex-direction:column;gap:1.4vh;margin-top:1vh}
+  .row{display:flex;align-items:center;gap:1vw;flex-wrap:wrap}
+  .node{border:2px solid var(--black);padding:1.1vh 1.1vw;font-size:1.25vw;font-weight:600;background:var(--white)}
+  .node.ai{background:var(--black);color:var(--yellow);border-color:var(--black)}
+  .node.human{background:var(--yellow);border-color:var(--black)}
+  .arrow{font-size:1.6vw;color:var(--tan)}
+  .tag{font-size:1vw;color:var(--brown)}
+  /* trade-off table */
+  table{width:100%;border-collapse:collapse;margin-top:1vh}
+  th,td{text-align:left;padding:1.1vh 1vw;font-size:1.15vw;border-bottom:1px solid var(--tan);vertical-align:top}
+  th{color:var(--brown);text-transform:uppercase;letter-spacing:.1em;font-size:.95vw}
+  .flag{color:#B4502B;font-weight:700}
+  .ok{color:#2e7d32;font-weight:700}
+  .dark .ok{color:#7CD97C}
+  .footer{position:fixed;bottom:2.5vh;left:8vw;right:8vw;display:flex;justify-content:space-between;
+    font-size:1vw;color:var(--brown)}
+  .dark .footer{color:var(--tan)}
+  .principle{font-size:2.3vw;line-height:1.45;font-weight:600;border-left:6px solid var(--yellow);padding-left:1.4vw}
+  .hint{position:fixed;bottom:2.5vh;right:8vw;font-size:.9vw;color:var(--brown);opacity:.6}
+</style>
+</head>
+<body>
+
+<!-- 1 TITLE -->
+<section class="slide dark active">
+  <div class="kicker">Fourier Earth · Supply Chain</div>
+  <h1>Amur 002<br>Purchasing Dashboard</h1>
+  <p class="lead muted" style="margin-top:4vh">How we track every part we buy — and how vendor emails
+  turn themselves into orders. Architecture &amp; design review.</p>
+  <div class="footer"><span>amur-supplychain.web.app</span><span>July 2026</span></div>
+</section>
+
+<!-- 2 WHAT IT IS -->
+<section class="slide">
+  <div class="kicker">The one-liner</div>
+  <h2>A dashboard that keeps <span class="bar">itself</span> up to date</h2>
+  <p class="lead">It tracks what we need to buy (BOM), what we've ordered, and our vendors.
+  Its standout feature: an <b>email robot</b> that reads vendor emails automatically and turns
+  them into pre-filled order cards — so orders stop being typed in by hand.</p>
+  <p class="lead" style="margin-top:3vh"><b>The rule that governs everything:</b> the AI only ever
+  <i>proposes</i>. A human approves before anything becomes real.</p>
+</section>
+
+<!-- 3 BIG PICTURE -->
+<section class="slide">
+  <div class="kicker">The big picture</div>
+  <h2>How it fits together</h2>
+  <div class="flow">
+    <div class="row">
+      <span class="node">Vendor emails / CC</span><span class="arrow">→</span>
+      <span class="node">purchasing@ <span class="tag">(Google Group)</span></span><span class="arrow">→</span>
+      <span class="node">bot mailbox <span class="tag">(labeled)</span></span>
+    </div>
+    <div class="row" style="padding-left:6vw">
+      <span class="arrow">↓</span>
+      <span class="node ai">Email Robot — reads every 10 min, AI parses, matches BOM, checks duplicates</span>
+    </div>
+    <div class="row" style="padding-left:6vw">
+      <span class="arrow">↓ writes only suggestion cards</span>
+    </div>
+    <div class="row">
+      <span class="node">Brex PO PDF</span><span class="tag">drag &amp; drop (no AI)</span><span class="arrow">→</span>
+      <span class="node">Firestore database <span class="tag">bom · orders · vendors · review cards</span></span>
+      <span class="arrow">↔</span><span class="node">React dashboard</span>
+    </div>
+    <div class="row" style="padding-left:22vw">
+      <span class="arrow">↑</span><span class="node human">Human clicks "Approve" in the Review Inbox</span>
+    </div>
+  </div>
+</section>
+
+<!-- 4 GOVERNING RULE -->
+<section class="slide dark">
+  <div class="kicker">The core principle</div>
+  <h2 style="color:var(--white)">AI proposes.<br><span class="bar" style="color:var(--black)">People decide.</span></h2>
+  <p class="big">Nothing the robot produces is ever committed automatically. Every parsed
+  email lands in a <b>Review Inbox</b> as a suggestion. A human approves it — one click —
+  before it becomes a real order.</p>
+  <p class="lead muted" style="margin-top:3vh">This is deliberate friction. It's the safety gate that
+  lets us trust automation without trusting it blindly.</p>
+</section>
+
+<!-- 5 ORDER FLOW -->
+<section class="slide">
+  <div class="kicker">End to end</div>
+  <h2>How an order flows in</h2>
+  <ul>
+    <li>Vendor emails a quote → someone CC's <b>purchasing@</b> (or forwards it)</li>
+    <li>Within 10 min the robot <b>parses</b> it, maps parts to the BOM, checks for duplicates</li>
+    <li>A <b>review card</b> appears in the dashboard (or is suppressed/flagged if it's a duplicate)</li>
+    <li>A human reviews, edits if needed, clicks <b>Approve</b> → it becomes a real order</li>
+    <li>Later emails (shipped, tracking, delayed) → <b>update cards</b> → approve → status advances</li>
+  </ul>
+</section>
+
+<!-- 6 TWO WAYS IN -->
+<section class="slide">
+  <div class="kicker">Two intake paths</div>
+  <h2>Every order enters one of two ways</h2>
+  <div class="two">
+    <div class="card">
+      <h3>1 · Official PO (Brex)</h3>
+      <ul>
+        <li>Download the PO PDF, <b>drag it onto the form</b></li>
+        <li>A deterministic parser reads the fixed Brex layout</li>
+        <li><b>No AI</b> — fast, exact, free</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>2 · Quote / CC / website order</h3>
+      <ul>
+        <li>No PO exists — the <b>email thread is the record</b></li>
+        <li>CC purchasing@ → the robot makes a review card</li>
+        <li>AI, because vendor formats vary</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 7 THE ROBOT -->
+<section class="slide dark">
+  <div class="kicker">The differentiator</div>
+  <h2 style="color:var(--white)">The email robot</h2>
+  <ul>
+    <li>Runs inside a dedicated mailbox (<b>purchasing-bot@</b>), polls every 10 minutes</li>
+    <li>Sends each email + PDF to <b>Claude</b>, gets back <b>structured data</b> (schema-enforced)</li>
+    <li>Maps line items to our <b>BOM part numbers</b>; classifies quote / order / shipping update</li>
+    <li>Writes <b>only</b> suggestion cards — it can never touch real orders, BOM, or vendors</li>
+    <li>The API key lives only in the script — <b>never in the browser, never in the repo</b></li>
+  </ul>
+</section>
+
+<!-- 8 DEDUP -->
+<section class="slide">
+  <div class="kicker">Keeping it clean</div>
+  <h2>Duplicate detection</h2>
+  <p class="lead">Before a card appears, the robot checks it against existing orders by
+  identity — <b>PO number → vendor's order number → fuzzy match</b>:</p>
+  <ul>
+    <li><b>Certain duplicate</b> (re-sent order) → suppressed, logged, never clutters review</li>
+    <li><b>Real update</b> (shipping / tracking / delay) → surfaced as an "Order Update"</li>
+    <li><b>Uncertain</b> (same vendor + total) → shown, <b>flagged</b> "possible duplicate"</li>
+    <li><b>New</b> → normal card</li>
+  </ul>
+  <p class="lead muted" style="margin-top:2vh">Runs in plain code, not AI — scales to thousands of
+  orders at zero extra cost.</p>
+</section>
+
+<!-- 9 SECURITY -->
+<section class="slide">
+  <div class="kicker">Security posture</div>
+  <h2>Protected — with known, tracked gaps</h2>
+  <div class="two">
+    <div class="card">
+      <h3 class="ok">✓ In place</h3>
+      <ul>
+        <li>Database locked to company Google accounts</li>
+        <li>No secrets in the page (and scrubbed from git history)</li>
+        <li>Outsiders get "Access denied"</li>
+        <li>Robot write-scoped to review cards only</li>
+        <li>XSS verified clean · full audit trail</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 class="flag">⚑ Deferred (with triggers)</h3>
+      <ul>
+        <li><b>No auto-backups yet</b> (Spark plan) — fix first</li>
+        <li>No per-role access — any teammate can edit all</li>
+        <li>Bot's DB access broader than its behavior</li>
+        <li>App Check not enabled</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 10 TRADE-OFF PHILOSOPHY -->
+<section class="slide dark">
+  <div class="kicker">Why we cut the corners we cut</div>
+  <h2 style="color:var(--white)">The trade-off principle</h2>
+  <p class="principle">Defer what's <b>cheap to add later</b> and <b>low risk now</b>.<br>
+  Invest early in what's <b>irreversible</b>: losing data, and committing bad data.</p>
+  <ul style="margin-top:3vh">
+    <li><b>Deferred:</b> auto-backups, role separation, App Check, scoped bot access — each with a named trigger for when we fix it</li>
+    <li><b>Invested up front:</b> the human-approval gate, and a full security hardening — because those are the catastrophic-if-wrong ones</li>
+  </ul>
+  <p class="lead muted" style="margin-top:2vh">Every deferral is a tracked decision with an upgrade path — not debt left to rot.</p>
+</section>
+
+<!-- 11 COST -->
+<section class="slide">
+  <div class="kicker">Cost</div>
+  <h2>What it costs to run</h2>
+  <ul>
+    <li>Hosting + database: effectively <b>$0</b> at this scale (free tier)</li>
+    <li>The only spend is the robot's AI calls: <b>~$0.10–0.15 per email</b></li>
+    <li>Production estimate: <b>~$30–100/month</b> depending on volume</li>
+    <li>A <b>spend cap</b> makes the worst case bounded — no surprise bills</li>
+  </ul>
+</section>
+
+<!-- 12 ROADMAP -->
+<section class="slide">
+  <div class="kicker">What's next</div>
+  <h2>Roadmap</h2>
+  <div class="two">
+    <div class="card">
+      <h3>Before wider rollout</h3>
+      <ul>
+        <li>Auto-backups (Blaze + PITR) — priority</li>
+        <li>App Check · bot lockdown · repo → org</li>
+        <li>Load the real BOM (the big unlock)</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3>Features</h3>
+      <ul>
+        <li>Overdue-order check-in agent (drafts, doesn't send)</li>
+        <li>Quote drag-and-drop auto-fill</li>
+        <li>Flexport shipment tracking</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- 13 CLOSING -->
+<section class="slide dark">
+  <div class="kicker">Status</div>
+  <h2 style="color:var(--white)">Live, secured,<br>and waiting on the <span class="bar" style="color:var(--black)">BOM</span></h2>
+  <p class="big">Dashboard deployed · security hardened · email robot running with duplicate
+  detection · order intake proven end-to-end.</p>
+  <p class="lead muted" style="margin-top:3vh">It's the right bridge for the build phase — and it's
+  teaching us exactly what we'll need from a real system later.</p>
+  <div class="footer"><span>Questions →</span><span>see ARCHITECTURE.md</span></div>
+</section>
+
+<div class="hint">← → to navigate</div>
+
+<script>
+  var slides=[].slice.call(document.querySelectorAll('.slide')),i=0;
+  function show(n){slides[i].classList.remove('active');i=Math.max(0,Math.min(slides.length-1,n));slides[i].classList.add('active')}
+  document.addEventListener('keydown',function(e){
+    if(e.key==='ArrowRight'||e.key===' '||e.key==='PageDown')show(i+1);
+    else if(e.key==='ArrowLeft'||e.key==='PageUp')show(i-1);
+    else if(e.key==='Home')show(0);
+    else if(e.key==='End')show(slides.length-1);
+  });
+  document.addEventListener('click',function(e){ if(e.clientX < window.innerWidth*0.25) show(i-1); else show(i+1); });
+</script>
+</body>
+</html>
