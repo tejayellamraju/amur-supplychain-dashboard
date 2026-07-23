@@ -82,6 +82,23 @@ function processThread(thread, data) {
   if (!result || result.kind === 'ignore') return;
 
   var card = buildCard(threadId, result, unparsed, thread.getLastMessageDate());
+
+  // Tiered duplicate handling against already-committed orders:
+  //  - exact match (PO# or vendor+ref#)  -> never lands in review; logged for audit
+  //  - fuzzy match (vendor + total/lines) -> lands, but flagged so it's a 1-second discard
+  //  - no match                           -> normal card
+  var dup = classifyDuplicate(card, data.orders);
+  if (dup.level === 'exact') {
+    Logger.log('DUPLICATE (exact, ' + dup.why + ') of order "' + matchLabel(dup.match) +
+      '" — suppressed card for thread ' + threadId + ': ' + card.summary);
+    return;
+  }
+  if (dup.level === 'fuzzy') {
+    var lbl = matchLabel(dup.match);
+    card.kindLabel = 'POSSIBLE DUPLICATE — may already be order ' + lbl;
+    card.summary = '⚠️ POSSIBLE DUPLICATE of existing order ' + lbl + ' (' + dup.why + '). ' + card.summary;
+    Logger.log('DUPLICATE (fuzzy) flagged against "' + lbl + '" for thread ' + threadId);
+  }
   upsertPendingCard(card);
 }
 
@@ -102,6 +119,7 @@ function extractWithClaude(threadText, docBlocks, data, existingCard, unparsed) 
     '- Official POs: only relevant if the memo contains the tag "amur002" (case-insensitive). POs with other project tags => kind "ignore".\n' +
     '- Pure chatter with nothing material => kind "ignore".\n' +
     '- Clearly purchasing-related but unextractable => kind "unparseable" and summarize why.\n' +
+    '- refNumber: extract the vendor\'s OWN order/quote/confirmation/invoice number (e.g. Valworx "25118", McMaster "MC-88213") — this is the stable identity for orders with no PO. Bare identifier only. Empty if none present.\n' +
     '- Never invent numbers. Unknown fields => empty string or 0.\n' +
     '- Dates as YYYY-MM-DD.';
 
@@ -112,13 +130,14 @@ function extractWithClaude(threadText, docBlocks, data, existingCard, unparsed) 
 
   var schema = {
     type: 'object', additionalProperties: false,
-    required: ['kind', 'vendor', 'vendorEmail', 'poNumber', 'summary', 'refLabel', 'orderType', 'stage', 'eta', 'tracking', 'total', 'lines'],
+    required: ['kind', 'vendor', 'vendorEmail', 'poNumber', 'refNumber', 'summary', 'refLabel', 'orderType', 'stage', 'eta', 'tracking', 'total', 'lines'],
     properties: {
       kind: { type: 'string', enum: ['new_order', 'quote', 'update', 'unparseable', 'ignore'] },
       vendor: { type: 'string' }, vendorEmail: { type: 'string' },
       poNumber: { type: 'string', description: 'PO number if referenced, else empty' },
+      refNumber: { type: 'string', description: "The vendor's own order/quote/confirmation/invoice number (e.g. Valworx 25118, McMaster MC-88213) — the stable identity for orders that have no PO. Just the identifier, no words. Empty if none." },
       summary: { type: 'string', description: 'One-line human summary for the review card' },
-      refLabel: { type: 'string', description: 'Order ref / quote number if any' },
+      refLabel: { type: 'string', description: 'Human-friendly order ref label, e.g. "Quote #25118"' },
       orderType: { type: 'string', enum: ['Purchase Order', 'Credit Card'] },
       stage: { type: 'string', enum: ['Draft', 'Ordered', 'Shipped', 'Delivered'] },
       eta: { type: 'string' }, tracking: { type: 'string' },
@@ -170,6 +189,7 @@ function buildCard(threadId, r, unparsed, lastMsgDate) {
     id: 'pend-' + threadId,
     gmailThreadId: threadId,
     poNumber: r.poNumber || '',
+    refNumber: r.refNumber || '',
     vendor: r.vendor || 'Unknown vendor',
     kindLabel: kindLabels[r.kind] || kindLabels.unparseable,
     refLabel: r.refLabel || '',
@@ -178,6 +198,11 @@ function buildCard(threadId, r, unparsed, lastMsgDate) {
     draft: {
       id: 'id-' + threadId,
       poNumber: r.poNumber || '',
+      // provenance — rides into the order on approve (approve spreads draft), so future
+      // dedup can match committed orders by their vendor ref number and source thread.
+      refNumber: r.refNumber || '',
+      refLabel: r.refLabel || '',
+      sourceThreadId: threadId,
       orderType: r.orderType || 'Credit Card',
       vendor: r.vendor || '',
       vendorEmail: r.vendorEmail || '',
@@ -190,6 +215,45 @@ function buildCard(threadId, r, unparsed, lastMsgDate) {
     }
   };
 }
+
+// Duplicate check: compare a freshly-built card against committed orders.
+// Returns { level: 'exact' | 'fuzzy' | 'none', match, why }.
+// Deterministic string/number comparison in code — scales to thousands of orders, zero AI cost.
+function norm(s) { return String(s == null ? '' : s).trim().toLowerCase(); }
+
+function classifyDuplicate(card, orders) {
+  var live = (orders || []).filter(function (o) { return !o.deleted; });
+  var d = card.draft;
+  // Level b — exact PO number
+  if (norm(d.poNumber)) {
+    var byPo = live.find(function (o) { return norm(o.poNumber) && norm(o.poNumber) === norm(d.poNumber); });
+    if (byPo) return { level: 'exact', match: byPo, why: 'PO ' + d.poNumber };
+  }
+  // Level c — vendor + vendor's own ref/order number (the anchor for no-PO orders)
+  if (norm(card.refNumber)) {
+    var r = norm(card.refNumber);
+    var byRef = live.find(function (o) {
+      if (norm(o.vendor) !== norm(d.vendor)) return false;
+      return norm(o.refNumber) === r || (o.refLabel && norm(o.refLabel).indexOf(r) >= 0);
+    });
+    if (byRef) return { level: 'exact', match: byRef, why: 'ref ' + card.refNumber };
+  }
+  // Level d — fuzzy: same vendor AND (total within 1% OR overlapping line SKUs)
+  var cardSkus = (d.lines || []).map(function (l) { return norm(l.sku); }).filter(Boolean);
+  var t2 = Number(d.total) || 0;
+  var byFuzzy = live.find(function (o) {
+    if (norm(o.vendor) !== norm(d.vendor)) return false;
+    var t1 = Number(o.total) || 0;
+    var totalClose = t1 > 0 && t2 > 0 && Math.abs(t1 - t2) <= Math.max(1, 0.01 * Math.max(t1, t2));
+    var oSkus = (o.lines || []).map(function (l) { return norm(l.sku); }).filter(Boolean);
+    var skuOverlap = cardSkus.length > 0 && cardSkus.some(function (s) { return oSkus.indexOf(s) >= 0; });
+    return totalClose || skuOverlap;
+  });
+  if (byFuzzy) return { level: 'fuzzy', match: byFuzzy, why: 'vendor + total/lines' };
+  return { level: 'none' };
+}
+
+function matchLabel(o) { return o.poNumber || o.refLabel || o.refNumber || (o.vendor + ' $' + (o.total || 0)); }
 
 // ---------- Firestore (REST, OAuth as purchasing-bot) ----------
 
