@@ -7,11 +7,19 @@ check() { # check <name> <expected> <actual>
   if [ "$2" = "$3" ]; then echo "PASS: $1"; else echo "FAIL: $1 (expected $2, got $3)"; FAIL=1; fi
 }
 
-# 1. No sensitive seed data in the public page (no login needed to fetch it)
+# 1. No sensitive seed data in the public page (no login needed to fetch it).
+# Markers (real vendor domains / PO figures) live in backups/seed-markers.txt,
+# which is gitignored so they never re-enter version control. Skips if absent.
 page=$(curl -s https://amur-supplychain.web.app)
-for m in m3pn aliyun sinohykey 73125 144935; do
-  check "live page has no '$m'" 0 "$(printf '%s' "$page" | grep -c "$m")"
-done
+MARKERS_FILE="$(dirname "$0")/backups/seed-markers.txt"
+if [ -f "$MARKERS_FILE" ]; then
+  while IFS= read -r m; do
+    [ -n "$m" ] || continue
+    check "live page has no seed marker" 0 "$(printf '%s' "$page" | grep -c "$m")"
+  done < "$MARKERS_FILE"
+else
+  echo "SKIP: seed-marker check (backups/seed-markers.txt not present)"
+fi
 
 # 2. Unauthenticated Firestore READ of dashboard/main is denied
 code=$(curl -s -o /dev/null -w '%{http_code}' \

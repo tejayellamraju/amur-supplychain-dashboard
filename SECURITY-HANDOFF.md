@@ -19,7 +19,7 @@ The `seedData()` function contains real vendor emails, PO pricing, and part spec
 - Replace the entire body of `seedData()` so it returns: `{ bom: [], orders: [], vendors: [], pendingOrders: [] }`
 - Delete all hardcoded bom/orders/vendors/pendingOrders array literals inside it.
 - DO NOT change anything else in the file. This is safe because seed data only writes when `dashboard/main` doesn't exist — it already exists, so live data is unaffected.
-- Verify: search the file afterward for `m3pn.com`, `aliyun.com`, `sinohykey.com`, `73125`, `144935` — zero matches expected.
+- Verify: search the file afterward for the known seed-data markers (real vendor domains + PO figures, listed in `backups/seed-markers.txt`, which is gitignored) — zero matches expected. `sh test-security.sh` automates this.
 
 ## STEP 2 — Firestore security rules
 Create `firestore.rules` in repo root:
@@ -52,7 +52,7 @@ service cloud.firestore {
 - Show the user a full `git diff` before committing.
 - Then: `git add . && git commit -m "security: strip seed data, add firestore rules, self-host xlsx" && git push`
 - After the GitHub Action deploys (~1-2 min), verify:
-  1. `curl -s https://amur-supplychain.web.app | grep -c m3pn` → must be 0
+  1. `sh test-security.sh` → all seed-marker checks must PASS (markers from `backups/seed-markers.txt`)
   2. Signed-in dashboard still shows all live data (nothing lost)
   3. An incognito window / non-company Google account cannot read data
 
