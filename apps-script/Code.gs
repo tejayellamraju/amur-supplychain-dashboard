@@ -326,3 +326,60 @@ function fromFs(v) {
   }
   return null;
 }
+
+// ============================================================================
+// Layer 1 — read-only dashboard assistant proxy (web-app endpoint)
+// ----------------------------------------------------------------------------
+// Deploy: Apps Script editor → Deploy → New deployment → type "Web app",
+//   execute as: purchasing-bot (me), who has access: "Anyone".
+// The dashboard POSTs { token, question, context } as a text/plain body (avoids a
+// CORS preflight). `context` is the dashboard data the signed-in user ALREADY has
+// in their browser — the proxy never reads Firestore and never writes anything, so
+// it cannot leak data the caller didn't already hold, or mutate state.
+// Security posture: token (in body) deters casual abuse; the real backstop against
+// cost-abuse is an Anthropic spend cap. Upgrade path: a Firebase-Auth-verified Cloud
+// Function once on Blaze, which replaces the token with real per-user auth.
+// ============================================================================
+function doPost(e) {
+  var out = function (obj) {
+    return ContentService.createTextOutput(JSON.stringify(obj)).setMimeType(ContentService.MimeType.JSON);
+  };
+  try {
+    var body = JSON.parse((e && e.postData && e.postData.contents) || '{}');
+    var expected = PropertiesService.getScriptProperties().getProperty('ASSISTANT_TOKEN');
+    if (!expected || body.token !== expected) return out({ error: 'unauthorized' });
+
+    var question = String(body.question || '').slice(0, 2000);
+    var context = String(body.context || '').slice(0, 120000);
+    if (!question) return out({ error: 'empty question' });
+
+    var system =
+      'You are a READ-ONLY assistant embedded in the Amur 002 supply-chain dashboard.\n' +
+      '- Answer ONLY questions about this project\'s supply-chain data: orders, BOM parts, vendors, pending review cards, coverage, spend, dates, statuses, and whether a review card looks like a duplicate of an existing order.\n' +
+      '- You CANNOT make changes — you only read and explain. If asked to change/approve/email anything, say that must be done in the dashboard.\n' +
+      '- Base every answer strictly on the DATA below. If the data does not contain the answer, say so plainly — never guess.\n' +
+      '- Politely decline anything unrelated to this dashboard\'s procurement data.\n' +
+      '- Be concise and specific (cite PO numbers, vendors, amounts).\n\n' +
+      'DATA (JSON):\n' + context;
+
+    var payload = {
+      model: CONFIG.MODEL, max_tokens: 2000, thinking: { type: 'adaptive' },
+      system: system, messages: [{ role: 'user', content: question }]
+    };
+    var resp = UrlFetchApp.fetch('https://api.anthropic.com/v1/messages', {
+      method: 'post', contentType: 'application/json',
+      headers: {
+        'x-api-key': PropertiesService.getScriptProperties().getProperty('ANTHROPIC_API_KEY'),
+        'anthropic-version': '2023-06-01'
+      },
+      payload: JSON.stringify(payload), muteHttpExceptions: true
+    });
+    if (resp.getResponseCode() !== 200) return out({ error: 'ai_' + resp.getResponseCode() });
+    var data = JSON.parse(resp.getContentText());
+    if (data.stop_reason === 'refusal') return out({ answer: 'I can only help with supply-chain questions about this dashboard.' });
+    var text = (data.content || []).filter(function (b) { return b.type === 'text'; }).map(function (b) { return b.text; }).join('');
+    return out({ answer: text || '(no answer)' });
+  } catch (err) {
+    return out({ error: String(err) });
+  }
+}
