@@ -96,6 +96,7 @@ function extractWithClaude(threadText, docBlocks, data, existingCard, unparsed) 
     'Existing orders (to classify updates vs new orders):\n' + orderList + '\n\n' +
     'Rules:\n' +
     '- One judgment for the WHOLE thread: does its latest material state describe a new order, a quote, or an update (confirmed/shipped/tracking/delay/short-ship) to an existing order?\n' +
+    '- Stage reflects the real lifecycle, do NOT over-advance it: a quote (just a price, no order placed yet) => stage "Draft". Only use "Ordered" when the thread shows an order was actually placed or confirmed (PO issued, "order confirmed", payment made); "Shipped" only with a ship/tracking signal; "Delivered" only when received.\n' +
     '- Fourier part numbers: a number explicitly labeled "FP#", "FP #", or "Fourier P/N" IS the company part number — put it in the line\'s sku verbatim, whether or not it appears in the BOM list above. Any OTHER number near a line (the vendor\'s own SKU/catalog/model number) is NOT the sku.\n' +
     '- If a line has no FP# label, still try to match it to a BOM part number by description; set sku to the matched BOM part number, else "".\n' +
     '- Official POs: only relevant if the memo contains the tag "amur002" (case-insensitive). POs with other project tags => kind "ignore".\n' +
