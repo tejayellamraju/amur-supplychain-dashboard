@@ -89,15 +89,24 @@ function processThread(thread, data) {
   //  - no match                           -> normal card
   var dup = classifyDuplicate(card, data.orders);
   if (dup.level === 'exact') {
-    Logger.log('DUPLICATE (exact, ' + dup.why + ') of order "' + matchLabel(dup.match) +
-      '" — suppressed card for thread ' + threadId + ': ' + card.summary);
-    return;
-  }
-  if (dup.level === 'fuzzy') {
     var lbl = matchLabel(dup.match);
-    card.kindLabel = 'POSSIBLE DUPLICATE — may already be order ' + lbl;
-    card.summary = '⚠️ POSSIBLE DUPLICATE of existing order ' + lbl + ' (' + dup.why + '). ' + card.summary;
-    Logger.log('DUPLICATE (fuzzy) flagged against "' + lbl + '" for thread ' + threadId);
+    if (result.kind === 'update') {
+      // Real status update (shipped / tracking / delay / confirmed) to an order we already have.
+      // NEVER suppress — surface it flagged as an update so the human applies the change.
+      card.kindLabel = 'ORDER UPDATE — ' + lbl;
+      card.summary = 'Update to existing order ' + lbl + '. ' + card.summary;
+      Logger.log('UPDATE to order "' + lbl + '" surfaced for thread ' + threadId);
+    } else {
+      // Re-sent quote / order confirmation for something already committed = true duplicate.
+      Logger.log('DUPLICATE (exact, ' + dup.why + ') of order "' + lbl +
+        '" — suppressed card for thread ' + threadId + ': ' + card.summary);
+      return;
+    }
+  } else if (dup.level === 'fuzzy') {
+    var flbl = matchLabel(dup.match);
+    card.kindLabel = 'POSSIBLE DUPLICATE — may already be order ' + flbl;
+    card.summary = '⚠️ POSSIBLE DUPLICATE of existing order ' + flbl + ' (' + dup.why + '). ' + card.summary;
+    Logger.log('DUPLICATE (fuzzy) flagged against "' + flbl + '" for thread ' + threadId);
   }
   upsertPendingCard(card);
 }
