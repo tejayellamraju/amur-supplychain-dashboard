@@ -124,11 +124,31 @@ A web dashboard that tracks everything we buy for the **Amur 002** project — t
 5. **Repo hygiene.** Repo should be confirmed **private**, account **2FA** on, and eventually **migrated to a company org** (re-pointing the deploy secret). The handoff docs in the repo contain vendor domains/pricing — fine while private, review before any wider sharing.
 6. **Single-account dependency for the robot.** The robot lives in one Google account (`purchasing-bot@`). Mitigated by it being a *dedicated, locked-down* account (not a person's), so it survives staff changes.
 
-**None of these is on-fire for a private, trusted-team, build-phase app.** The one to do *before wider rollout*: **#3 (backups)**.
+**None of these is on-fire for a private, trusted-team, build-phase app.** The one to do *before wider rollout*: **#3 (backups)**. See **§6 for *why* each trade-off was taken** — they're deliberate, reasoned deferrals, not oversights.
 
 ---
 
-## 6. Cost
+## 6. Why we took these trade-offs (the reasoning)
+
+**The one principle behind all of them:** during the build phase, optimize for **speed-to-value and reversibility** — take shortcuts on things that are *cheap to add later* and *low-risk now*, but **never compromise on the two things that are catastrophic if wrong: losing data, and committing bad data.** That's why we held the line on the human-approval gate and a full security audit, while deferring backups-automation, role separation, and App Check. Every deferral below has a **named trigger** for when to fix it — that's what makes it a reasoned decision, not tech debt left to rot.
+
+| Trade-off we took | What we gave up | Why it's acceptable *now* | When we fix it (trigger) |
+|---|---|---|---|
+| **Bundled single-file front-end** (not a source project) | Clean dev ergonomics | Got us from idea → deployed, working tool fast; has carried 10+ features; migrating has zero user benefit yet | When it's a multi-dev product / post-build-phase (parallel rebuild, §8) |
+| **Bot has broad IAM** (Cloud Datastore User) | Least-privilege purity | Blast radius is capped by a single-doc project; the robot's *code* self-limits to `pendingOrders`; scoping IAM is fiddly for little gain now | Custom IAM role before wider rollout |
+| **No role separation** (any domain user can edit all) | Fine-grained access control | Team is ~5 trusted people; audit log + soft-delete + backups give recovery; RBAC rules are real complexity, premature at this size | Role-based rules before the team grows |
+| **No automated backups** (Spark plan) | Point-in-time recovery | Free/fast during build; manual Export JSON covers the gap; kept billing setup out of the critical path | **First pre-rollout fix** — Blaze + PITR |
+| **App Check off** | Defense-in-depth vs. automated abuse | Domain rules already block non-company access; misconfiguring it risks locking out the app; abuse risk low at current scale/obscurity | Enable (monitor→enforce) before wider rollout |
+| **Robot in one Google account** | Zero single-account dependency | It's a *dedicated, locked-down* account (not a person's), so it survives staff changes; service-account delegation is heavier | Service account at org-migration time |
+| **Opus model for the robot** (not a cheaper one) | Lower per-email cost | Extraction accuracy directly determines *human cleanup* burden — errors cost people time; the accuracy is worth cents at current volume | Re-evaluate model if volume makes cost bite |
+
+**And two places we deliberately took *more* rigor, not less — because these are the catastrophic-if-wrong ones:**
+- **Human-approval gate instead of auto-commit.** We *chose* extra friction (a click per order) because a wrong auto-commit at scale is expensive to unwind, and the click is cheap insurance. AI proposes; people decide.
+- **Full security hardening up front** (stripped secrets, scrubbed git history, domain-locked DB, XSS-verified). Data exposure is irreversible, so this wasn't deferred.
+
+The through-line: **we deferred what's cheap-to-add and low-risk; we invested early in what's irreversible.** That's the trade-off philosophy in one sentence — and it's the answer to "why did you cut *that* corner?"
+
+## 7. Cost
 
 - **Only the email robot spends money** (Claude API, `claude-opus-4-8`): roughly **$0.10–0.15 per email processed** (system prompt + context + PDF in, structured JSON out).
 - Current testing volume: a few dollars total. Production estimate at 10–30 order emails/day: **~$30–100/month**, PDF-size dependent.
@@ -137,7 +157,7 @@ A web dashboard that tracks everything we buy for the **Amur 002** project — t
 
 ---
 
-## 7. Known limitations (engineering honesty)
+## 8. Known limitations (engineering honesty)
 
 - **Duplicate detection isn't 100%.** Deterministic for orders with a PO# or vendor order number; *fuzzy + flagged* for orders with no number anywhere (rare). Human review is the backstop. Email carries no universal order ID, so perfect dedup is impossible — this is the realistic ceiling.
 - **BOM not yet loaded.** Coverage %, gap analysis, and description-based part matching are limited until the real BOM is imported. `FP#`-labeled numbers work in the meantime.
@@ -146,7 +166,7 @@ A web dashboard that tracks everything we buy for the **Amur 002** project — t
 
 ---
 
-## 8. Is this the right architecture? (and the migration path)
+## 9. Is this the right architecture? (and the migration path)
 
 **Yes, for the current stage.** This is deliberately a **bridge system for the build phase**: it gets us clean order tracking + AI email intake with almost no process weight, and it teaches us exactly what we'd need from a real system later. At production scale, hardware supply chain graduates to a dedicated tool (Cofactr/Fulcrum) or ERP — the `purchasing@` address and the data model carry forward; the bridge retires.
 
@@ -156,7 +176,7 @@ A web dashboard that tracks everything we buy for the **Amur 002** project — t
 
 ---
 
-## 9. What's deferred / roadmap
+## 10. What's deferred / roadmap
 
 **Before wider team rollout:**
 - Upgrade to Blaze → enable **PITR + scheduled backups** (highest priority)
@@ -172,7 +192,7 @@ A web dashboard that tracks everything we buy for the **Amur 002** project — t
 
 ---
 
-## 10. Tech stack summary (for the senior dev)
+## 11. Tech stack summary (for the senior dev)
 
 | Layer | Technology |
 |---|---|
