@@ -115,11 +115,12 @@ A web dashboard that tracks everything we buy for the **Amur 002** project — t
 - ✅ **Robot is write-scoped** to `pendingOrders` — it cannot alter real orders/BOM/vendors.
 - ✅ **XSS verified clean** — untrusted vendor text renders as inert text (React escaping).
 - ✅ **Audit trail** — every edit stamped, every delete soft + logged + restorable.
+- ✅ **Automatic backups** — Firestore Point-in-Time Recovery enabled (7-day continuous rewind), on top of the audit log and manual Export JSON.
 
 **🚩 Security flags & honest concerns (things a senior dev should know):**
 1. **Robot's database access is broader than its behavior.** The bot account was granted the project-wide **Cloud Datastore User** IAM role, which **bypasses the Firestore security rules**. Today the robot's *code* self-limits to `pendingOrders`, but that containment is code-level, not enforced by IAM. **Harden:** a custom IAM role scoped to the single document. *(Deferred; low risk while single-doc + locked-down bot account.)*
 2. **No role separation among team members.** Any verified domain user can read/write/**delete** the entire dashboard document. The Import-JSON admin gate is **client-side only** — a determined user could write to Firestore directly. Accepted trade-off for a small, trusted team; revisit with role-based rules before wide rollout.
-3. **No server-side backups yet.** The project is on the free **Spark** plan, so **Point-in-Time Recovery and scheduled backups aren't available.** Only mitigation today is manual **Export JSON**. Combined with #2 (any user can overwrite), this is the **highest-priority pre-rollout fix** → upgrade to Blaze, enable PITR.
+3. **~~No server-side backups~~ — RESOLVED (July 2026).** Upgraded to the Blaze plan and enabled Firestore **Point-in-Time Recovery** (7-day continuous rewind). Combined with the audit log and manual Export JSON, accidental deletes/overwrites (incl. the #2 "any user can overwrite" risk) are now recoverable. *Optional next step: add a daily scheduled-backup snapshot for longer retention.*
 4. **App Check not enabled.** The Firestore endpoint accepts authentication attempts from anywhere (rules still block non-domain accounts). Enabling App Check (reCAPTCHA, monitor mode first) hardens against automated abuse. *(Deferred.)*
 5. **Repo hygiene.** Repo should be confirmed **private**, account **2FA** on, and eventually **migrated to a company org** (re-pointing the deploy secret). The handoff docs in the repo contain vendor domains/pricing — fine while private, review before any wider sharing.
 6. **Single-account dependency for the robot.** The robot lives in one Google account (`purchasing-bot@`). Mitigated by it being a *dedicated, locked-down* account (not a person's), so it survives staff changes.
@@ -137,7 +138,7 @@ A web dashboard that tracks everything we buy for the **Amur 002** project — t
 | **Bundled single-file front-end** (not a source project) | Clean dev ergonomics | Got us from idea → deployed, working tool fast; has carried 10+ features; migrating has zero user benefit yet | When it's a multi-dev product / post-build-phase (parallel rebuild, §8) |
 | **Bot has broad IAM** (Cloud Datastore User) | Least-privilege purity | Blast radius is capped by a single-doc project; the robot's *code* self-limits to `pendingOrders`; scoping IAM is fiddly for little gain now | Custom IAM role before wider rollout |
 | **No role separation** (any domain user can edit all) | Fine-grained access control | Team is ~5 trusted people; audit log + soft-delete + backups give recovery; RBAC rules are real complexity, premature at this size | Role-based rules before the team grows |
-| **No automated backups** (Spark plan) | Point-in-time recovery | Free/fast during build; manual Export JSON covers the gap; kept billing setup out of the critical path | **First pre-rollout fix** — Blaze + PITR |
+| ~~**No automated backups**~~ ✅ done | — | Resolved: Blaze + Point-in-Time Recovery enabled (7-day rewind) | — |
 | **App Check off** | Defense-in-depth vs. automated abuse | Domain rules already block non-company access; misconfiguring it risks locking out the app; abuse risk low at current scale/obscurity | Enable (monitor→enforce) before wider rollout |
 | **Robot in one Google account** | Zero single-account dependency | It's a *dedicated, locked-down* account (not a person's), so it survives staff changes; service-account delegation is heavier | Service account at org-migration time |
 | **Opus model for the robot** (not a cheaper one) | Lower per-email cost | Extraction accuracy directly determines *human cleanup* burden — errors cost people time; the accuracy is worth cents at current volume | Re-evaluate model if volume makes cost bite |
@@ -179,7 +180,7 @@ The through-line: **we deferred what's cheap-to-add and low-risk; we invested ea
 ## 10. What's deferred / roadmap
 
 **Before wider team rollout:**
-- Upgrade to Blaze → enable **PITR + scheduled backups** (highest priority)
+- ✅ ~~Upgrade to Blaze → enable PITR~~ — **done (July 2026)**; optional: add a daily scheduled-backup snapshot
 - **App Check** (monitor mode → enforce)
 - Lock down bot account to Gmail+Drive+Apps Script only; confirm repo private + 2FA
 - Custom IAM role scoping the bot to one document

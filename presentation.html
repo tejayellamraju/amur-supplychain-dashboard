@@ -205,15 +205,16 @@
         <li>Outsiders get "Access denied"</li>
         <li>Robot write-scoped to review cards only</li>
         <li>XSS verified clean · full audit trail</li>
+        <li><b>Automatic backups (7-day rewind)</b></li>
       </ul>
     </div>
     <div class="card">
       <h3 class="flag">⚑ Deferred (with triggers)</h3>
       <ul>
-        <li><b>No auto-backups yet</b> (Spark plan) — fix first</li>
         <li>No per-role access — any teammate can edit all</li>
         <li>Bot's DB access broader than its behavior</li>
         <li>App Check not enabled</li>
+        <li class="muted">(auto-backups — now done ✓)</li>
       </ul>
     </div>
   </div>
@@ -252,7 +253,7 @@
     <div class="card">
       <h3>Before wider rollout</h3>
       <ul>
-        <li>Auto-backups (Blaze + PITR) — priority</li>
+        <li>Auto-backups (Blaze + PITR) ✓ done</li>
         <li>App Check · bot lockdown · repo → org</li>
         <li>Load the real BOM (the big unlock)</li>
       </ul>
