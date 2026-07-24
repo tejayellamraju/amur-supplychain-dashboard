@@ -7,7 +7,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Victor+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --yellow:#F5FD01; --black:#020202; --white:#F9F8F3; --tan:#B49A75; --brown:#8A7A5C; --line:#d9d2c4; }
+  :root{ --yellow:#F5FD01; --black:#020202; --white:#F9F8F3; --tan:#B49A75; --brown:#8A7A5C; }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%}
   body{font-family:'Victor Mono',ui-monospace,monospace;background:var(--black);color:var(--white);overflow:hidden}
@@ -16,7 +16,7 @@
   .slide.dark{background:var(--black);color:var(--white)}
   .kicker{font-size:1vw;letter-spacing:.28em;text-transform:uppercase;color:var(--brown);margin-bottom:2vh}
   h1{font-size:4.4vw;font-weight:700;line-height:1.06;letter-spacing:-.02em}
-  h2{font-size:2.7vw;font-weight:700;line-height:1.12;margin-bottom:2.6vh;letter-spacing:-.01em}
+  h2{font-size:2.7vw;font-weight:700;line-height:1.12;margin-bottom:2.4vh;letter-spacing:-.01em}
   p,li{font-size:1.5vw;line-height:1.5}
   .lead{font-size:1.75vw;line-height:1.45;max-width:86%}
   .muted{color:var(--brown)}
@@ -25,20 +25,28 @@
   li::before{content:"–";position:absolute;left:0;color:var(--tan)}
   li b{color:var(--black)} .dark li b{color:var(--yellow)}
   .two{display:grid;grid-template-columns:1fr 1fr;gap:3vw;margin-top:.6vh}
-  .col h3{font-size:1.35vw;margin-bottom:.8vh;color:var(--brown);text-transform:uppercase;letter-spacing:.08em}
+  .col h3{font-size:1.3vw;margin-bottom:.8vh;color:var(--brown);text-transform:uppercase;letter-spacing:.08em}
   .col li{font-size:1.25vw;margin:.65vh 0}
+  code{background:rgba(0,0,0,.06);padding:.05em .3em;font-size:.92em}
+  .dark code{background:rgba(255,255,255,.1)}
   /* flow diagram */
-  .flow{display:flex;flex-direction:column;gap:1.3vh;margin-top:1.5vh}
-  .row{display:flex;align-items:center;gap:.8vw;flex-wrap:wrap}
-  .node{border:1.5px solid var(--black);padding:1vh 1vw;font-size:1.15vw;font-weight:600;background:var(--white);border-radius:0}
-  .node small{display:block;font-weight:400;color:var(--brown);font-size:.85vw;margin-top:.2vh}
-  .node.ai{background:var(--black);color:var(--yellow);border-color:var(--black)}
-  .node.ai small{color:var(--tan)}
+  .flow{display:flex;flex-direction:column;gap:2vh;margin-top:2vh}
+  .row{display:flex;align-items:center;gap:1vw;flex-wrap:wrap}
+  .node{border:2px solid var(--black);padding:1.4vh 1.2vw;font-size:1.35vw;font-weight:600;background:var(--white)}
+  .node small{display:block;font-weight:400;color:var(--brown);font-size:.95vw;margin-top:.3vh}
+  .node.ai{background:var(--black);color:var(--yellow);border-color:var(--black)} .node.ai small{color:var(--tan)}
   .node.human{background:var(--yellow);border-color:var(--black)}
   .node.store{background:#eef4ff;border-color:#3b5bdb}
-  .arrow{font-size:1.5vw;color:var(--tan);font-weight:700}
-  .note{font-size:1.15vw;color:var(--brown);margin-top:2vh}
-  .rule{font-size:1.6vw;line-height:1.4;border-left:5px solid var(--yellow);padding-left:1vw;margin-top:1.4vh}
+  .arrow{font-size:1.8vw;color:var(--tan);font-weight:700}
+  /* pipeline steps */
+  .steps{display:flex;align-items:stretch;gap:.7vw;margin-top:2.5vh}
+  .step{flex:1;border:2px solid var(--black);padding:1.6vh 1vw}
+  .step .n{font-size:1vw;color:var(--brown);letter-spacing:.1em}
+  .step h4{font-size:1.35vw;margin:.5vh 0}
+  .step p{font-size:1.05vw;color:var(--brown);line-height:1.4}
+  .sarrow{align-self:center;font-size:1.6vw;color:var(--tan);font-weight:700}
+  .note{font-size:1.15vw;color:var(--brown);margin-top:2.2vh}
+  .rule{font-size:1.55vw;line-height:1.4;border-left:5px solid var(--yellow);padding-left:1vw;margin-top:1.2vh}
   .hint{position:fixed;bottom:2.4vh;right:4vw;font-size:.9vw;color:var(--brown);opacity:.5}
   .footer{position:fixed;bottom:2.4vh;left:7vw;right:7vw;display:flex;justify-content:space-between;font-size:.9vw;color:var(--brown)}
   .dark .footer{color:var(--tan)}
@@ -80,61 +88,109 @@
   <p class="note">For pure tracking a Sheet would have done. We built for the workflow — and kept it thin.</p>
 </section>
 
-<!-- 3 FLOW DIAGRAM / ARCHITECTURE -->
+<!-- 3 ARCHITECTURE — FLOW DIAGRAM (standalone) -->
 <section class="slide">
-  <div class="kicker">Architecture &amp; data flow</div>
-  <h2>How it fits together</h2>
+  <div class="kicker">Architecture · 1 of 3 — end-to-end flow</div>
+  <h2>Data flow</h2>
   <div class="flow">
     <div class="row">
       <span class="node">Vendor / team email<small>CC purchasing@</small></span><span class="arrow">→</span>
-      <span class="node">Google Group<small>purchasing@ (fan-out)</small></span><span class="arrow">→</span>
+      <span class="node">Google Group<small>purchasing@ · fan-out</small></span><span class="arrow">→</span>
       <span class="node">Bot mailbox<small>Gmail label filter</small></span>
     </div>
-    <div class="row" style="padding-left:4vw">
+    <div class="row" style="padding-left:5vw">
       <span class="arrow">↓</span>
-      <span class="node ai">Apps Script + Claude API<small>10-min trigger · parse · dedup · BOM-match · structured JSON</small></span>
-      <span class="arrow">↓ writes pendingOrders only</span>
+      <span class="node ai">Apps Script + Claude<small>10-min poll · parse · dedup · BOM-match → structured JSON</small></span>
+      <span class="arrow">↓ writes <code>pendingOrders</code> only</span>
     </div>
     <div class="row">
       <span class="node">Brex PO PDF<small>drag-drop · pdf.js · no AI</small></span><span class="arrow">→</span>
-      <span class="node store">Firestore · dashboard/main<small>bom · orders · vendors · pendingOrders · actionLog</small></span>
+      <span class="node store">Firestore · <code>dashboard/main</code><small>bom · orders · vendors · pendingOrders · actionLog</small></span>
     </div>
-    <div class="row" style="padding-left:14vw">
+    <div class="row" style="padding-left:16vw">
       <span class="arrow">↕ realtime</span>
       <span class="node">React SPA<small>Firebase Hosting (static)</small></span><span class="arrow">→</span>
       <span class="node human">Human approves<small>Review Inbox</small></span>
     </div>
   </div>
-  <p class="note"><b style="color:var(--black)">Stack:</b> static single-page React on Firebase Hosting · Cloud Firestore + security rules · Apps Script → Claude (key server-side only) · pdf.js. Serverless — nothing to run. It's a static SPA by design; the front-end is one bundled file today (see trade-offs).</p>
+  <p class="note">Two intake paths — AI email pipeline (top) and deterministic Brex-PO drop (left) — both land in one store; a human commits.</p>
 </section>
 
-<!-- 4 DATA MODEL & TRUST -->
+<!-- 4 ARCHITECTURE — COMPONENTS / STACK -->
+<section class="slide">
+  <div class="kicker">Architecture · 2 of 3 — components &amp; choices</div>
+  <h2>The stack, and why</h2>
+  <div class="two">
+    <div class="col">
+      <h3>Front-end</h3>
+      <ul>
+        <li><b>React SPA, static-hosted</b> on Firebase Hosting. Serverless — nothing to run. Deliberate: fast/cheap to ship. <i>Trade-off: one bundled file today.</i></li>
+      </ul>
+      <h3 style="margin-top:2vh">Data</h3>
+      <ul>
+        <li><b>Cloud Firestore</b>, single doc, realtime listeners. Security rules are the access boundary. Stats computed at render, not stored.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>Automation</h3>
+      <ul>
+        <li><b>Google Apps Script</b> in a dedicated bot account — timer-triggered, no infra to host. Reads Gmail, writes Firestore.</li>
+      </ul>
+      <h3 style="margin-top:2vh">AI &amp; parsing</h3>
+      <ul>
+        <li><b>Claude API</b> for email extraction — structured-JSON output, key server-side only.</li>
+        <li><b>pdf.js</b> for Brex POs — deterministic parse, no AI (fixed layout).</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">Everything is managed/serverless — no boxes to run, patch, or scale. The cost is a bundled front-end (migration planned).</p>
+</section>
+
+<!-- 5 ARCHITECTURE — ROBOT PIPELINE -->
 <section class="slide dark">
+  <div class="kicker">Architecture · 3 of 3 — the email robot pipeline</div>
+  <h2 style="color:var(--white)">Inside the 10-minute tick</h2>
+  <div class="steps">
+    <div class="step"><div class="n">01</div><h4>Poll</h4><p>Read new threads under the <code>purchasing</code> label since last run.</p></div>
+    <span class="sarrow">→</span>
+    <div class="step"><div class="n">02</div><h4>Extract</h4><p>Thread text + PDF attachments → Claude with live BOM + orders as context → schema-enforced JSON.</p></div>
+    <span class="sarrow">→</span>
+    <div class="step"><div class="n">03</div><h4>Dedup</h4><p>Match by identity: PO# → vendor order# → fuzzy (vendor+total/SKUs). In code, deterministic.</p></div>
+    <span class="sarrow">→</span>
+    <div class="step"><div class="n">04</div><h4>Route</h4><p>Suppress re-sends · surface real updates · flag possible dupes · else new card.</p></div>
+    <span class="sarrow">→</span>
+    <div class="step"><div class="n">05</div><h4>Upsert</h4><p>One card per <b>order identity</b> into <code>pendingOrders</code>. Human approves.</p></div>
+  </div>
+  <p class="note">Keyed by order identity, not thread — so one thread can yield several orders, and one order across threads collapses to one card. Matching runs in code (scales, zero AI cost); the AI only extracts.</p>
+</section>
+
+<!-- 6 DATA MODEL & TRUST -->
+<section class="slide">
   <div class="kicker">Data model &amp; trust boundaries</div>
-  <h2 style="color:var(--white)">Where data &amp; access live</h2>
+  <h2>Where data &amp; access live</h2>
   <ul>
-    <li><b>One Firestore doc</b> (<code>dashboard/main</code>) holds all arrays; coverage/spend are computed at render, never stored.</li>
+    <li><b>One Firestore doc</b> (<code>dashboard/main</code>) holds all arrays; coverage/spend computed at render, never stored.</li>
     <li><b>Access</b>: rules allow read+write only for verified <code>@fourier.earth</code>/<code>fourierearth.com</code>; deny-all fallback. Client gate is UX; rules are the boundary.</li>
-    <li><b>Robot</b> runs in a dedicated bot account; its Firestore write is masked to <b>pendingOrders only</b> — it cannot touch orders/BOM/vendors.</li>
-    <li><b>Secrets</b>: Claude API key lives only in Apps Script; never in the browser or repo (git history scrubbed).</li>
-    <li><b>Trust model</b>: AI output never auto-commits — it lands in a review queue a human approves.</li>
+    <li><b>Robot</b> runs in a dedicated bot account; its write is masked to <b><code>pendingOrders</code> only</b> — cannot touch orders/BOM/vendors.</li>
+    <li><b>Secrets</b>: Claude key only in Apps Script; never in the browser or repo (git history scrubbed).</li>
+    <li><b>Trust model</b>: AI never auto-commits — everything lands in a review queue a human approves.</li>
   </ul>
 </section>
 
-<!-- 5 TRADE-OFFS -->
+<!-- 7 TRADE-OFFS -->
 <section class="slide">
   <div class="kicker">Trade-offs &amp; known limitations</div>
   <h2>What we punted on, and why</h2>
   <ul>
     <li><b>Single-doc writes → last-write-wins</b> on concurrent edits. Fine at current scale; recoverable. Fix later: per-entity documents.</li>
-    <li><b>Front-end is a bundled artifact</b> — hard to maintain, bus-factor of one. Migration to a source project planned.</li>
+    <li><b>Front-end is a bundled artifact</b> — hard to maintain, bus-factor of one. Source migration planned.</li>
     <li><b>No per-role access</b> — any verified user can edit/delete all. Accepted for a small trusted team; backups + audit cover it.</li>
     <li><b>Bot IAM broader than its behavior</b>, <b>App Check off</b>, <b>repo not yet in org</b> — each deferred with a trigger.</li>
   </ul>
   <p class="rule">Rule we followed: spend early on what's irreversible (data loss, bad writes); defer what's cheap to add and low-risk now — and tag each deferral with when we do it.</p>
 </section>
 
-<!-- 6 RELIABILITY + INCIDENT -->
+<!-- 8 RELIABILITY + INCIDENT -->
 <section class="slide">
   <div class="kicker">Reliability &amp; a real incident</div>
   <h2>Caught early, can't lose data</h2>
@@ -142,11 +198,11 @@
     <li><b>Automated tests</b> — 5 suites, 40+ checks over the real reducers; a regression test per bug; run before deploy.</li>
     <li><b>Post-deploy smoke test</b> + <b>PITR backups</b> (7-day rewind) + Activity-log restore.</li>
   </ul>
-  <p class="lead" style="margin-top:2vh"><b>Incident (worth sharing):</b> approving duplicate review cards reused one order <code>id</code> → a single delete cascaded across the duplicates. Root cause: approve reused the card's id. Fix: unique id per approved order + a regression test. Recovered via soft-delete + PITR — <b>zero data lost.</b></p>
+  <p class="lead" style="margin-top:2vh"><b>Incident:</b> approving duplicate review cards reused one order <code>id</code> → a single delete cascaded across the duplicates. Root cause: approve reused the card's id. Fix: unique id per approved order + a regression test. Recovered via soft-delete + PITR — <b>zero data lost.</b></p>
   <p class="note">Deferred: full browser E2E (Playwright + Firebase emulator, fake auth) — lands with the source migration.</p>
 </section>
 
-<!-- 7 OPEN QUESTIONS + ROADMAP -->
+<!-- 9 OPEN QUESTIONS + ROADMAP -->
 <section class="slide dark">
   <div class="kicker">Open questions &amp; roadmap</div>
   <h2 style="color:var(--white)">Where I want your input</h2>
