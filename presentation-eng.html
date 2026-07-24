@@ -3,170 +3,172 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Amur 002 Dashboard — Architecture (Eng)</title>
+<title>Amur 002 Dashboard — Design Review</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Victor+Mono:wght@400;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{ --yellow:#F5FD01; --black:#020202; --white:#F9F8F3; --tan:#B49A75; --brown:#8A7A5C; }
+  :root{ --yellow:#F5FD01; --black:#020202; --white:#F9F8F3; --tan:#B49A75; --brown:#8A7A5C; --line:#d9d2c4; }
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{height:100%}
   body{font-family:'Victor Mono',ui-monospace,monospace;background:var(--black);color:var(--white);overflow:hidden}
-  .slide{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;padding:6vh 8vw;background:var(--white);color:var(--black)}
+  .slide{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;padding:6vh 7vw;background:var(--white);color:var(--black)}
   .slide.active{display:flex}
   .slide.dark{background:var(--black);color:var(--white)}
-  .kicker{font-size:1vw;letter-spacing:.3em;text-transform:uppercase;color:var(--brown);margin-bottom:2.2vh}
-  h1{font-size:4.6vw;font-weight:700;line-height:1.05;letter-spacing:-.02em}
-  h2{font-size:2.9vw;font-weight:700;line-height:1.1;margin-bottom:3vh;letter-spacing:-.01em}
-  h2 .bar{background:var(--yellow);padding:0 .2em}
-  p,li{font-size:1.55vw;line-height:1.5}
-  .lead{font-size:1.8vw;line-height:1.45;max-width:84%}
+  .kicker{font-size:1vw;letter-spacing:.28em;text-transform:uppercase;color:var(--brown);margin-bottom:2vh}
+  h1{font-size:4.4vw;font-weight:700;line-height:1.06;letter-spacing:-.02em}
+  h2{font-size:2.7vw;font-weight:700;line-height:1.12;margin-bottom:2.6vh;letter-spacing:-.01em}
+  p,li{font-size:1.5vw;line-height:1.5}
+  .lead{font-size:1.75vw;line-height:1.45;max-width:86%}
   .muted{color:var(--brown)}
-  ul{list-style:none;margin-top:.6vh}
-  li{margin:1.05vh 0;padding-left:1.5em;position:relative}
-  li::before{content:"▸";position:absolute;left:0;color:var(--tan)}
+  ul{list-style:none;margin-top:.5vh}
+  li{margin:1vh 0;padding-left:1.4em;position:relative}
+  li::before{content:"–";position:absolute;left:0;color:var(--tan)}
   li b{color:var(--black)} .dark li b{color:var(--yellow)}
-  .two{display:grid;grid-template-columns:1fr 1fr;gap:3.5vw;margin-top:1vh}
-  .card{border:2px solid var(--black);padding:2.2vh 1.6vw}
-  .dark .card{border-color:var(--tan)}
-  .card h3{font-size:1.5vw;margin-bottom:1vh}
-  .card li{font-size:1.25vw;margin:.7vh 0}
-  .flow{display:flex;flex-direction:column;gap:1.2vh;margin-top:1vh}
-  .row{display:flex;align-items:center;gap:.9vw;flex-wrap:wrap}
-  .node{border:2px solid var(--black);padding:1vh 1vw;font-size:1.2vw;font-weight:600;background:var(--white)}
-  .node.ai{background:var(--black);color:var(--yellow)} .node.human{background:var(--yellow)}
-  .arrow{font-size:1.4vw;color:var(--tan)} .tag{font-size:.95vw;color:var(--brown)}
-  table{width:100%;border-collapse:collapse;margin-top:.5vh}
-  th,td{text-align:left;padding:.9vh 1vw;font-size:1.15vw;border-bottom:1px solid var(--tan);vertical-align:top}
-  th{color:var(--brown);text-transform:uppercase;letter-spacing:.08em;font-size:.9vw}
-  .ok{color:#2e7d32;font-weight:700} .dark .ok{color:#7CD97C}
-  .flag{color:#B4502B;font-weight:700}
-  .principle{font-size:1.9vw;line-height:1.4;font-weight:600;border-left:6px solid var(--yellow);padding-left:1.2vw;margin-top:1vh}
-  .hint{position:fixed;bottom:2.5vh;right:4vw;font-size:.9vw;color:var(--brown);opacity:.5}
-  .footer{position:fixed;bottom:2.5vh;left:8vw;right:8vw;display:flex;justify-content:space-between;font-size:.95vw;color:var(--brown)}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:3vw;margin-top:.6vh}
+  .col h3{font-size:1.35vw;margin-bottom:.8vh;color:var(--brown);text-transform:uppercase;letter-spacing:.08em}
+  .col li{font-size:1.25vw;margin:.65vh 0}
+  /* flow diagram */
+  .flow{display:flex;flex-direction:column;gap:1.3vh;margin-top:1.5vh}
+  .row{display:flex;align-items:center;gap:.8vw;flex-wrap:wrap}
+  .node{border:1.5px solid var(--black);padding:1vh 1vw;font-size:1.15vw;font-weight:600;background:var(--white);border-radius:0}
+  .node small{display:block;font-weight:400;color:var(--brown);font-size:.85vw;margin-top:.2vh}
+  .node.ai{background:var(--black);color:var(--yellow);border-color:var(--black)}
+  .node.ai small{color:var(--tan)}
+  .node.human{background:var(--yellow);border-color:var(--black)}
+  .node.store{background:#eef4ff;border-color:#3b5bdb}
+  .arrow{font-size:1.5vw;color:var(--tan);font-weight:700}
+  .note{font-size:1.15vw;color:var(--brown);margin-top:2vh}
+  .rule{font-size:1.6vw;line-height:1.4;border-left:5px solid var(--yellow);padding-left:1vw;margin-top:1.4vh}
+  .hint{position:fixed;bottom:2.4vh;right:4vw;font-size:.9vw;color:var(--brown);opacity:.5}
+  .footer{position:fixed;bottom:2.4vh;left:7vw;right:7vw;display:flex;justify-content:space-between;font-size:.9vw;color:var(--brown)}
   .dark .footer{color:var(--tan)}
 </style>
 </head>
 <body>
 
-<!-- 1 -->
+<!-- 1 TITLE -->
 <section class="slide dark active">
-  <div class="kicker">Engineering overview</div>
-  <h1>Amur 002 Dashboard<br>Architecture &amp; rationale</h1>
-  <p class="lead muted" style="margin-top:3.5vh">A serverless procurement-workflow app: React SPA + Firestore + an Apps Script/Claude email pipeline. What it is, why we built vs. bought, and where it's going.</p>
-  <div class="footer"><span>full detail: ARCHITECTURE.md</span><span>MVP / bridge — migration planned</span></div>
+  <div class="kicker">Engineering design review</div>
+  <h1>Amur 002 Purchasing Dashboard</h1>
+  <p class="lead muted" style="margin-top:3.5vh">Architecture, the build-vs-buy decision, trade-offs, a bug we hit, and open questions. Poke holes.</p>
+  <div class="footer"><span>full write-up: ARCHITECTURE.md</span><span>status: MVP in use, migration planned</span></div>
 </section>
 
-<!-- 2 WHY BUILD -->
+<!-- 2 WHY WE BUILT IT -->
 <section class="slide">
-  <div class="kicker">Why build, not buy?</div>
-  <h2>What earns a custom app over a <span class="bar">spreadsheet / ERP</span></h2>
-  <p class="lead">A Sheet handles the <i>tracking</i> (and gives collaboration + versioning free). An ERP is premature at this scale. We built a thin app because the value is a <b>workflow a spreadsheet can't do</b>:</p>
-  <ul>
-    <li><b>AI email → structured review → human-approve pipeline</b> — dedup, BOM-matching, a staging area you vet before anything commits. Not a grid; an application.</li>
-    <li><b>Data governance</b> — validation, computed-not-stored stats, soft-delete/restore/audit. A shared sheet degrades to chaos at 10–15 editors.</li>
-    <li><b>A foundation for automation</b> — check-in agents, quote/PO parsing, shipment tracking.</li>
-  </ul>
-  <p class="muted" style="font-size:1.35vw;margin-top:1.5vh">Honest scope: for pure tracking a Sheet would suffice. This is a deliberate bet on the workflow + roadmap — shipped fast and cheap, with a known graduation path (right).</p>
+  <div class="kicker">Why we built it — build vs. buy</div>
+  <h2>The decision</h2>
+  <p class="lead"><b>Need:</b> track procurement for Amur 002, and stop hand-entering orders from vendor emails.</p>
+  <div class="two" style="margin-top:2vh">
+    <div class="col">
+      <h3>Options considered</h3>
+      <ul>
+        <li><b>Google Sheet</b> — great at tracking; collaboration + version history free. Weak at a controlled email→approve workflow and data integrity at 10–15 editors.</li>
+        <li><b>ERP</b> (Cofactr/Fulcrum) — right at production scale; cost + overhead premature at 5–15 people.</li>
+        <li><b>Thin custom app</b> — what we chose.</li>
+      </ul>
+    </div>
+    <div class="col">
+      <h3>Why custom</h3>
+      <ul>
+        <li>The value is a <b>workflow</b>, not a table: email → AI-parsed → dedup/BOM-match → review card → human approve.</li>
+        <li>Structured data + computed stats a stray cell edit can't break.</li>
+        <li>A base for later automation (chasers, quote/PO parsing).</li>
+      </ul>
+    </div>
+  </div>
+  <p class="note">For pure tracking a Sheet would have done. We built for the workflow — and kept it thin.</p>
 </section>
 
-<!-- 3 ARCHITECTURE / STACK -->
+<!-- 3 FLOW DIAGRAM / ARCHITECTURE -->
 <section class="slide">
-  <div class="kicker">How it's built (yes — a static SPA, deliberately)</div>
-  <h2>Architecture</h2>
+  <div class="kicker">Architecture &amp; data flow</div>
+  <h2>How it fits together</h2>
   <div class="flow">
     <div class="row">
-      <span class="node">Vendors / team — email/CC</span><span class="arrow">→</span>
-      <span class="node">Google Group <span class="tag">purchasing@</span></span><span class="arrow">→</span>
-      <span class="node">bot mailbox <span class="tag">Gmail label</span></span>
+      <span class="node">Vendor / team email<small>CC purchasing@</small></span><span class="arrow">→</span>
+      <span class="node">Google Group<small>purchasing@ (fan-out)</small></span><span class="arrow">→</span>
+      <span class="node">Bot mailbox<small>Gmail label filter</small></span>
     </div>
-    <div class="row" style="padding-left:5vw">
-      <span class="arrow">↓</span><span class="node ai">Apps Script (10-min trigger) + Claude — parse, dedup, BOM-match</span>
+    <div class="row" style="padding-left:4vw">
+      <span class="arrow">↓</span>
+      <span class="node ai">Apps Script + Claude API<small>10-min trigger · parse · dedup · BOM-match · structured JSON</small></span>
       <span class="arrow">↓ writes pendingOrders only</span>
     </div>
     <div class="row">
-      <span class="node">Brex PO PDF</span><span class="tag">deterministic parse, no AI</span><span class="arrow">→</span>
-      <span class="node">Firestore <span class="tag">1 doc + security rules</span></span><span class="arrow">↔</span>
-      <span class="node">React SPA <span class="tag">Firebase Hosting (static)</span></span><span class="arrow">↔</span>
-      <span class="node human">human approves</span>
+      <span class="node">Brex PO PDF<small>drag-drop · pdf.js · no AI</small></span><span class="arrow">→</span>
+      <span class="node store">Firestore · dashboard/main<small>bom · orders · vendors · pendingOrders · actionLog</small></span>
+    </div>
+    <div class="row" style="padding-left:14vw">
+      <span class="arrow">↕ realtime</span>
+      <span class="node">React SPA<small>Firebase Hosting (static)</small></span><span class="arrow">→</span>
+      <span class="node human">Human approves<small>Review Inbox</small></span>
     </div>
   </div>
-  <p class="muted" style="font-size:1.3vw;margin-top:2vh"><b style="color:var(--black)">Stack:</b> static single-page React on Firebase Hosting · Cloud Firestore (rules-enforced) · Google Apps Script → Claude API (key server-side only) · pdf.js for PO parsing. No servers to run — cheap, fast to ship. Trade-off: the front-end is currently a bundled artifact (migration planned, last slide).</p>
+  <p class="note"><b style="color:var(--black)">Stack:</b> static single-page React on Firebase Hosting · Cloud Firestore + security rules · Apps Script → Claude (key server-side only) · pdf.js. Serverless — nothing to run. It's a static SPA by design; the front-end is one bundled file today (see trade-offs).</p>
 </section>
 
-<!-- 4 TRUST MODEL -->
+<!-- 4 DATA MODEL & TRUST -->
 <section class="slide dark">
-  <div class="kicker">Trust &amp; safety model</div>
-  <h2 style="color:var(--white)">AI proposes · <span class="bar" style="color:var(--black)">humans commit</span></h2>
+  <div class="kicker">Data model &amp; trust boundaries</div>
+  <h2 style="color:var(--white)">Where data &amp; access live</h2>
   <ul>
-    <li>AI output <b>never auto-commits</b> — everything lands in a review queue a person approves</li>
-    <li>The robot's DB write is <b>scoped to review cards only</b> — it cannot mutate orders/BOM/vendors</li>
-    <li>Claude API key lives <b>only server-side</b> (Apps Script), never in the browser or repo</li>
-    <li>Every order gets a <b>unique id</b>; dedup collapses/flags duplicates deterministically (in code, scales)</li>
+    <li><b>One Firestore doc</b> (<code>dashboard/main</code>) holds all arrays; coverage/spend are computed at render, never stored.</li>
+    <li><b>Access</b>: rules allow read+write only for verified <code>@fourier.earth</code>/<code>fourierearth.com</code>; deny-all fallback. Client gate is UX; rules are the boundary.</li>
+    <li><b>Robot</b> runs in a dedicated bot account; its Firestore write is masked to <b>pendingOrders only</b> — it cannot touch orders/BOM/vendors.</li>
+    <li><b>Secrets</b>: Claude API key lives only in Apps Script; never in the browser or repo (git history scrubbed).</li>
+    <li><b>Trust model</b>: AI output never auto-commits — it lands in a review queue a human approves.</li>
   </ul>
 </section>
 
-<!-- 5 SECURITY + TRADE-OFFS -->
+<!-- 5 TRADE-OFFS -->
 <section class="slide">
-  <div class="kicker">Security posture &amp; deliberate trade-offs</div>
-  <h2>Hardened, with tracked deferrals</h2>
-  <div class="two">
-    <div class="card">
-      <h3 class="ok">✓ In place</h3>
-      <ul>
-        <li>Domain-locked Firestore + deny-all fallback</li>
-        <li>No secrets in client; git history scrubbed</li>
-        <li>Access-denied gate · XSS verified · audit log</li>
-        <li>Automatic backups (PITR 7-day rewind)</li>
-      </ul>
-    </div>
-    <div class="card">
-      <h3 class="flag">⚑ Deferred (triggered)</h3>
-      <ul>
-        <li>No per-role access (trusted team; recoverable)</li>
-        <li>Bot IAM broader than behavior (code-scoped)</li>
-        <li>App Check off · repo→org pending</li>
-      </ul>
-    </div>
-  </div>
-  <p class="principle">Principle: defer what's cheap-to-add &amp; low-risk-now; invest early in the irreversible (data loss, bad commits). Every deferral has a fix trigger.</p>
+  <div class="kicker">Trade-offs &amp; known limitations</div>
+  <h2>What we punted on, and why</h2>
+  <ul>
+    <li><b>Single-doc writes → last-write-wins</b> on concurrent edits. Fine at current scale; recoverable. Fix later: per-entity documents.</li>
+    <li><b>Front-end is a bundled artifact</b> — hard to maintain, bus-factor of one. Migration to a source project planned.</li>
+    <li><b>No per-role access</b> — any verified user can edit/delete all. Accepted for a small trusted team; backups + audit cover it.</li>
+    <li><b>Bot IAM broader than its behavior</b>, <b>App Check off</b>, <b>repo not yet in org</b> — each deferred with a trigger.</li>
+  </ul>
+  <p class="rule">Rule we followed: spend early on what's irreversible (data loss, bad writes); defer what's cheap to add and low-risk now — and tag each deferral with when we do it.</p>
 </section>
 
-<!-- 6 RELIABILITY -->
+<!-- 6 RELIABILITY + INCIDENT -->
 <section class="slide">
-  <div class="kicker">Reliability / how bugs are handled</div>
+  <div class="kicker">Reliability &amp; a real incident</div>
   <h2>Caught early, can't lose data</h2>
   <ul>
-    <li><b>Automated logic tests</b> (5 suites, 40+ checks over the real reducers) — a regression test per bug; run before deploy</li>
-    <li><b>Post-deploy smoke test</b> — serves 200 · shell rendered · no data leak · security gates hold</li>
-    <li><b>Recovery net</b> — PITR + Activity-log restore + Export JSON (proven in a real incident)</li>
-    <li><b>Playbook</b> — contain (revert) → root-cause → fix → regression test → verify. Code + data both reversible.</li>
+    <li><b>Automated tests</b> — 5 suites, 40+ checks over the real reducers; a regression test per bug; run before deploy.</li>
+    <li><b>Post-deploy smoke test</b> + <b>PITR backups</b> (7-day rewind) + Activity-log restore.</li>
   </ul>
-  <p class="muted" style="font-size:1.35vw;margin-top:1.5vh">Deferred: full browser E2E (Playwright + Firebase emulator, fake auth) — lands with the source migration.</p>
+  <p class="lead" style="margin-top:2vh"><b>Incident (worth sharing):</b> approving duplicate review cards reused one order <code>id</code> → a single delete cascaded across the duplicates. Root cause: approve reused the card's id. Fix: unique id per approved order + a regression test. Recovered via soft-delete + PITR — <b>zero data lost.</b></p>
+  <p class="note">Deferred: full browser E2E (Playwright + Firebase emulator, fake auth) — lands with the source migration.</p>
 </section>
 
-<!-- 7 ROADMAP / GRADUATION -->
+<!-- 7 OPEN QUESTIONS + ROADMAP -->
 <section class="slide dark">
-  <div class="kicker">Where it's going</div>
-  <h2 style="color:var(--white)">Graduation path</h2>
+  <div class="kicker">Open questions &amp; roadmap</div>
+  <h2 style="color:var(--white)">Where I want your input</h2>
   <div class="two">
-    <div class="card">
-      <h3>Bridge → maintainable</h3>
+    <div class="col">
+      <h3 style="color:var(--tan)">Open questions</h3>
       <ul>
-        <li>Rebuild the bundled front-end as a source Vite/React project — <b>in parallel, same Firestore, zero-downtime cutover</b></li>
-        <li>Per-entity Firestore docs → true multi-editor concurrency</li>
-        <li>Reduce bus-factor: a second maintainer</li>
+        <li>When to move single-doc → per-entity Firestore? What write-contention threshold?</li>
+        <li>Auth for a future in-dashboard AI assistant — Cloud Function vs. token?</li>
+        <li>Keep building this, or fold into an ERP as scale grows?</li>
       </ul>
     </div>
-    <div class="card">
-      <h3>Pre-wider-rollout hardening</h3>
+    <div class="col">
+      <h3 style="color:var(--tan)">Roadmap</h3>
       <ul>
-        <li>App Check (monitor → enforce)</li>
-        <li>Bot account lockdown · scoped IAM role</li>
-        <li>Repo private + 2FA + company org</li>
+        <li>Rebuild front-end as source (parallel, same Firestore, zero-downtime cutover)</li>
+        <li>Per-entity docs for multi-editor concurrency</li>
+        <li>App Check · scoped bot IAM · repo → org</li>
       </ul>
     </div>
   </div>
-  <p class="muted" style="font-size:1.4vw;margin-top:2vh">Honest framing: it's a well-scoped <b>MVP/bridge</b> — cheap, shipped, secured, tested — that de-risks and teaches us what a permanent system (or a bought tool) needs.</p>
+  <p class="note">It's an MVP, on purpose. We rebuild it or buy a tool when we outgrow it — and by then we'll know what to ask for.</p>
 </section>
 
 <div class="hint">← → to navigate</div>
