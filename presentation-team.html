@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Amur 002 Purchasing Dashboard — Team</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Victor+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{ --yellow:#F5FD01; --black:#020202; --white:#F9F8F3; --tan:#B49A75; --brown:#8A7A5C; }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{height:100%}
+  body{font-family:'Victor Mono',ui-monospace,monospace;background:var(--black);color:var(--white);overflow:hidden}
+  .slide{position:fixed;inset:0;display:none;flex-direction:column;justify-content:center;padding:7vh 9vw;background:var(--white);color:var(--black)}
+  .slide.active{display:flex}
+  .slide.dark{background:var(--black);color:var(--white)}
+  .kicker{font-size:1.1vw;letter-spacing:.3em;text-transform:uppercase;color:var(--brown);margin-bottom:2.4vh}
+  h1{font-size:5vw;font-weight:700;line-height:1.05;letter-spacing:-.02em}
+  h2{font-size:3.2vw;font-weight:700;line-height:1.1;margin-bottom:3.5vh;letter-spacing:-.01em}
+  h2 .bar{background:var(--yellow);padding:0 .2em}
+  p,li{font-size:1.8vw;line-height:1.55}
+  .lead{font-size:2vw;line-height:1.5;max-width:82%}
+  .big{font-size:2.5vw;line-height:1.4;font-weight:600}
+  .muted{color:var(--brown)}
+  ul{list-style:none;margin-top:1vh}
+  li{margin:1.4vh 0;padding-left:1.6em;position:relative}
+  li::before{content:"▸";position:absolute;left:0;color:var(--tan)}
+  li b{color:var(--black)} .dark li b{color:var(--yellow)}
+  .flow{display:flex;align-items:center;gap:1vw;flex-wrap:wrap;margin-top:2vh}
+  .node{border:2px solid var(--black);padding:1.3vh 1.2vw;font-size:1.4vw;font-weight:600}
+  .node.ai{background:var(--black);color:var(--yellow)} .node.human{background:var(--yellow)}
+  .arrow{font-size:1.8vw;color:var(--tan)}
+  .footer{position:fixed;bottom:2.5vh;left:9vw;right:9vw;display:flex;justify-content:space-between;font-size:1vw;color:var(--brown)}
+  .dark .footer{color:var(--tan)}
+  .hint{position:fixed;bottom:2.5vh;right:4vw;font-size:.9vw;color:var(--brown);opacity:.5}
+</style>
+</head>
+<body>
+
+<section class="slide dark active">
+  <div class="kicker">Fourier Earth · Purchasing</div>
+  <h1>Amur 002<br>Purchasing Dashboard</h1>
+  <p class="lead muted" style="margin-top:4vh">One place to see everything we're buying — that keeps itself up to date from your vendor emails.</p>
+  <div class="footer"><span>amur-supplychain.web.app</span><span>Sign in with your Fourier account</span></div>
+</section>
+
+<section class="slide">
+  <div class="kicker">What it is</div>
+  <h2>Your orders, <span class="bar">always current</span></h2>
+  <p class="lead">Instead of typing every order into a sheet, the dashboard reads the vendor emails you CC and turns them into ready-to-approve order cards. You just review and click <b>Approve</b>. It tracks the parts we need (BOM), what we've ordered, and our vendors — with live coverage and spend.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">The honest question</div>
+  <h2>"Why not a <span class="bar">spreadsheet</span>?"</h2>
+  <p class="lead">A sheet can hold a list — but it can't do the part that saves you time:</p>
+  <ul>
+    <li><b>Vendor emails become approve-with-one-click cards</b> — no manual data entry</li>
+    <li><b>The data can't get accidentally broken</b> — structured fields, not free-for-all cells</li>
+    <li><b>It grows</b> — overdue-order nudges, quote parsing, and more, later</li>
+  </ul>
+</section>
+
+<section class="slide dark">
+  <div class="kicker">How an order shows up</div>
+  <h2 style="color:var(--white)">Email → card → <span class="bar" style="color:var(--black)">approve</span></h2>
+  <div class="flow">
+    <span class="node">Vendor email (CC'd)</span><span class="arrow">→</span>
+    <span class="node ai">Robot reads &amp; drafts it</span><span class="arrow">→</span>
+    <span class="node">Review Inbox card</span><span class="arrow">→</span>
+    <span class="node human">You Approve</span><span class="arrow">→</span>
+    <span class="node">Order tracked</span>
+  </div>
+  <p class="lead muted" style="margin-top:4vh">Nothing becomes a real order until a person approves it. Later emails (shipped, tracking, delays) show up as update cards the same way.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">Your part — 3 small habits</div>
+  <h2>How to feed it</h2>
+  <ul>
+    <li><b>CC <span style="color:var(--black)">purchasing@fourier.earth</span></b> on vendor threads → the robot sees them</li>
+    <li><b>Put <span style="color:var(--black)">#amur002</span></b> in the email → tags it to this project</li>
+    <li><b>Put <span style="color:var(--black)">FP# &lt;part number&gt;</span></b> by each item → auto-matches to our BOM</li>
+  </ul>
+  <p class="lead muted" style="margin-top:2vh">All optional — it still works without them, they just make it more accurate. For Brex POs, just drag the PDF onto "Add Order" and it fills itself in.</p>
+</section>
+
+<section class="slide">
+  <div class="kicker">Is it safe?</div>
+  <h2>Locked down &amp; recoverable</h2>
+  <ul>
+    <li>Only Fourier accounts can open it — outsiders are blocked</li>
+    <li>Automatic backups — anything deleted can be restored (7-day rewind)</li>
+    <li>Every change is logged, and deletes are reversible</li>
+    <li>The AI only ever <b>suggests</b> — a person always approves</li>
+  </ul>
+</section>
+
+<section class="slide dark">
+  <div class="kicker">Status</div>
+  <h2 style="color:var(--white)">Live and ready to use</h2>
+  <p class="big">Sign in at <b>amur-supplychain.web.app</b>, CC <b>purchasing@</b> on your vendor emails, and approve the cards as they land.</p>
+  <p class="lead muted" style="margin-top:3vh">Questions or something looks off? Flag it — bugs are caught early and can't lose data.</p>
+</section>
+
+<div class="hint">← → to navigate</div>
+<script>
+  var s=[].slice.call(document.querySelectorAll('.slide')),i=0;
+  function show(n){s[i].classList.remove('active');i=Math.max(0,Math.min(s.length-1,n));s[i].classList.add('active')}
+  document.addEventListener('keydown',e=>{if(['ArrowRight',' ','PageDown'].includes(e.key))show(i+1);else if(['ArrowLeft','PageUp'].includes(e.key))show(i-1);else if(e.key==='Home')show(0);else if(e.key==='End')show(s.length-1)});
+  document.addEventListener('click',e=>show(e.clientX<innerWidth*0.25?i-1:i+1));
+</script>
+</body>
+</html>
