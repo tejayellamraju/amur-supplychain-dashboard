@@ -48,6 +48,11 @@
   .note{font-size:1.15vw;color:var(--brown);margin-top:2.2vh}
   .rule{font-size:1.55vw;line-height:1.4;border-left:5px solid var(--yellow);padding-left:1vw;margin-top:1.2vh}
   .hint{position:fixed;bottom:2.4vh;right:4vw;font-size:.9vw;color:var(--brown);opacity:.5}
+  /* numbers grid */
+  .nums{display:grid;grid-template-columns:repeat(4,1fr);gap:2.4vw 2vw;margin-top:2.5vh}
+  .num .big{font-size:3.2vw;font-weight:700;line-height:1;letter-spacing:-.02em}
+  .dark .num .big{color:var(--yellow)}
+  .num .lbl{font-size:1.05vw;color:var(--brown);margin-top:.8vh;line-height:1.35}
   .footer{position:fixed;bottom:2.4vh;left:7vw;right:7vw;display:flex;justify-content:space-between;font-size:.9vw;color:var(--brown)}
   .dark .footer{color:var(--tan)}
 </style>
@@ -202,7 +207,24 @@
   <p class="note">Deferred: full browser E2E (Playwright + Firebase emulator, fake auth) — lands with the source migration.</p>
 </section>
 
-<!-- 9 OPEN QUESTIONS + ROADMAP -->
+<!-- 9 BY THE NUMBERS -->
+<section class="slide dark">
+  <div class="kicker">By the numbers</div>
+  <h2 style="color:var(--white)">The system, quantified</h2>
+  <div class="nums">
+    <div class="num"><div class="big">~$0.12</div><div class="lbl">Claude cost per parsed email (input BOM context + JSON out; ~$0.10–0.15)</div></div>
+    <div class="num"><div class="big">10 min</div><div class="lbl">Robot poll cadence — batch, not per-email; AI only extracts</div></div>
+    <div class="num"><div class="big">5 / 40+</div><div class="lbl">Test suites / assertions over the real reducers; a regression test per bug</div></div>
+    <div class="num"><div class="big">7 days</div><div class="lbl">PITR continuous rewind + Activity-log restore + Export-JSON backups</div></div>
+    <div class="num"><div class="big">298</div><div class="lbl">BOM parts (291 sourced sheet + 7 cell-stack); stats computed at render</div></div>
+    <div class="num"><div class="big">1 MiB</div><div class="lbl">Firestore single-doc ceiling — the real scaling trigger (see Q&amp;A)</div></div>
+    <div class="num"><div class="big">$0</div><div class="lbl">Hosting/compute — static SPA + serverless Apps Script; nothing to run</div></div>
+    <div class="num"><div class="big">~5–15</div><div class="lbl">Concurrent users today; last-write-wins is acceptable at this scale</div></div>
+  </div>
+  <p class="note">Cost scales with email volume, not users. The doc-size ceiling — not user count — is what forces the per-entity migration; today the doc is a small fraction of 1 MiB.</p>
+</section>
+
+<!-- 10 OPEN QUESTIONS + ROADMAP -->
 <section class="slide dark">
   <div class="kicker">Open questions &amp; roadmap</div>
   <h2 style="color:var(--white)">Where I want your input</h2>
