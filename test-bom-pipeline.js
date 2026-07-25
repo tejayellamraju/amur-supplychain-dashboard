@@ -14,20 +14,40 @@ function runImport(headers, rows, mapping, mode, existingBom) {
     partNumber: String(g(row, 'partNumber') || ''), description: String(g(row, 'description') || ''),
     category: String(g(row, 'category') || ''), unit: String(g(row, 'unit') || 'ea'),
     qtyRequired: Number(g(row, 'qtyRequired')) || 0, targetUnitCost: Number(g(row, 'targetUnitCost')) || 0,
-    preferredVendor: String(g(row, 'preferredVendor') || ''), notes: String(g(row, 'notes') || '')
+    preferredVendor: String(g(row, 'preferredVendor') || ''),
+    vendorPartNumber: String(g(row, 'vendorPartNumber') || ''), alternateVendor: String(g(row, 'alternateVendor') || ''),
+    altVendorPartNumber: String(g(row, 'altVendorPartNumber') || ''), link: String(g(row, 'link') || ''),
+    notes: String(g(row, 'notes') || '')
   })).filter(p => p.partNumber);
   return mode === 'replace' ? newParts : [...existingBom, ...newParts];
 }
 
 // --- bomWithStats (verbatim coverage logic) -------------------------------
+// Contacted/Quoted orders are "in flight" — they do NOT count as coverage (an inquiry isn't a secured part)
+// but they DO subtract from what still needs sourcing, so you can't double-contact a vendor for the same part.
+const INFLIGHT_STAGES = ['Contacted', 'Quoted'];
 function bomWithStats(bom, orders) {
   return bom.filter(p => !p.deleted).map(p => {
-    let qtyOrdered = 0;
-    orders.forEach(o => (o.lines || []).forEach(l => { if (l.sku === p.partNumber) qtyOrdered += Number(l.qty) || 0; }));
-    const qtyRemaining = Math.max(0, (p.qtyRequired || 0) - qtyOrdered);
-    const status = qtyOrdered <= 0 ? 'Not Started' : qtyOrdered >= p.qtyRequired ? 'Full' : 'Partial';
-    return { ...p, qtyOrdered, qtyRemaining, status };
+    let qtyOrdered = 0, qtyInflight = 0;
+    orders.forEach(o => {
+      const inflight = INFLIGHT_STAGES.indexOf(o.stage) !== -1;
+      (o.lines || []).forEach(l => { if (l.sku === p.partNumber) { const q = Number(l.qty) || 0; if (inflight) qtyInflight += q; else qtyOrdered += q; } });
+    });
+    const req = p.qtyRequired || 0;
+    const qtyRemaining = Math.max(0, req - qtyOrdered);
+    const qtyToSource = Math.max(0, req - qtyOrdered - qtyInflight);
+    const status = req <= 0 ? 'In stock' : qtyOrdered <= 0 ? 'Not Started' : qtyOrdered >= req ? 'Full' : 'Partial';
+    return { ...p, qtyOrdered, qtyInflight, qtyRemaining, qtyToSource, status };
   });
+}
+
+// --- BOM import CSV transform (the Difference -> qty-to-order rule) ---
+// Mirrors the script that generates BOM/amur002-bom-import.csv from the raw prep sheet.
+// Negative Difference = a real shortfall -> order |diff|. Zero/positive = have enough -> order 0.
+function transformRow(difference) {
+  const diff = Number(difference);
+  const qtyToOrder = (Number.isFinite(diff) && diff < 0) ? Math.abs(diff) : 0;
+  return { qtyToOrder };
 }
 
 // === 1. Import parsing: mapping, type coercion, blank-part-number filtering ===
@@ -73,7 +93,47 @@ assert.equal(liveDoc.bom[0].partNumber, 'REAL-001');
 assert.deepStrictEqual(liveDoc.orders, ordersSnapshot, 'orders IDENTICAL after replace-mode BOM import');
 assert.deepStrictEqual(liveDoc.vendors, [{ name: 'Acme' }]);     // vendors untouched too
 
+// === 4. Difference -> qty-to-order transform (the real BOM import rule) ===
+assert.deepStrictEqual(transformRow('-1'), { qtyToOrder: 1 });   // shortfall of 1 -> order 1
+assert.deepStrictEqual(transformRow('-4'), { qtyToOrder: 4 });   // shortfall of 4 -> order 4
+assert.deepStrictEqual(transformRow('0'),  { qtyToOrder: 0 });   // exactly enough -> order 0
+assert.deepStrictEqual(transformRow('5'),  { qtyToOrder: 0 });   // surplus -> order 0
+
+// === 5. New BOM fields survive import (Vendor PN / alt vendor / link) ===
+const vHeaders = ['partNumber', 'description', 'preferredVendor', 'vendorPartNumber', 'alternateVendor', 'altVendorPartNumber', 'link'];
+const vMap = { partNumber: 0, description: 1, preferredVendor: 2, vendorPartNumber: 3, alternateVendor: 4, altVendorPartNumber: 5, link: 6 };
+const vBom = runImport(vHeaders, [['140-00023', 'ADAPTER', 'Superlok', 'SMC-4-8N', 'MCMASTER-CARR', '5182K113', '']], vMap, 'replace', []);
+assert.equal(vBom[0].vendorPartNumber, 'SMC-4-8N');
+assert.equal(vBom[0].alternateVendor, 'MCMASTER-CARR');
+assert.equal(vBom[0].altVendorPartNumber, '5182K113');
+assert.equal(vBom[0].link, '');
+
+// === 6. Stage-aware coverage: Contacted/Quoted are in-flight, NOT coverage ===
+const stageBom = [{ partNumber: 'P1', qtyRequired: 10, deleted: false }];
+const contactedOnly = bomWithStats(stageBom, [{ stage: 'Contacted', lines: [{ sku: 'P1', qty: 10 }] }])[0];
+assert.equal(contactedOnly.qtyOrdered, 0, 'a Contacted inquiry is NOT coverage');
+assert.equal(contactedOnly.qtyInflight, 10);
+assert.equal(contactedOnly.status, 'Not Started', 'inquiry does not make a part Full');
+assert.equal(contactedOnly.qtyToSource, 0, 'but it IS in flight, so nothing left to source (no double-contact)');
+assert.equal(contactedOnly.qtyRemaining, 10, 'still uncovered until actually ordered');
+
+const ordered = bomWithStats(stageBom, [{ stage: 'Ordered', lines: [{ sku: 'P1', qty: 10 }] }])[0];
+assert.equal(ordered.qtyOrdered, 10); assert.equal(ordered.status, 'Full'); assert.equal(ordered.qtyToSource, 0);
+
+// partial in-flight: 4 contacted of 10 required -> 6 left to source, still 0 covered
+const partialInflight = bomWithStats(stageBom, [{ stage: 'Quoted', lines: [{ sku: 'P1', qty: 4 }] }])[0];
+assert.equal(partialInflight.qtyToSource, 6); assert.equal(partialInflight.qtyOrdered, 0);
+
+// === 7. In-stock: a part with 0 to-order (already procured / enough on hand) ===
+const stockBom = [{ partNumber: 'S1', qtyRequired: 0, deleted: false }];
+const stock = bomWithStats(stockBom, [])[0];
+assert.equal(stock.status, 'In stock', 'qty-to-order 0 -> In stock, not a red action item');
+assert.equal(stock.qtyToSource, 0, 'never appears in Place Orders');
+
 console.log('ALL BOM PIPELINE TESTS PASS');
-console.log('  ✓ import: column mapping, type coercion, blank rows dropped');
+console.log('  ✓ import: column mapping, type coercion, blank rows dropped, vendor/link fields carried');
+console.log('  ✓ transform: Difference<0 -> qtyToOrder=|diff|; Difference>=0 -> qtyToOrder=0');
 console.log('  ✓ coverage: qtyOrdered summed across orders, Full/Partial/Not Started correct');
+console.log('  ✓ in-stock: qty-to-order 0 -> "In stock" status, excluded from Place Orders');
+console.log('  ✓ stages: Contacted/Quoted count as in-flight (not coverage), prevent double-contact via qtyToSource');
 console.log('  ✓ teardown: replace-mode BOM import leaves orders + vendors byte-identical');

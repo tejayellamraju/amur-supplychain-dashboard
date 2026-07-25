@@ -122,7 +122,7 @@ function extractWithClaude(threadText, docBlocks, data, existingCard, unparsed) 
     'Existing orders (to classify updates vs new orders):\n' + orderList + '\n\n' +
     'Rules:\n' +
     '- One judgment for the WHOLE thread: does its latest material state describe a new order, a quote, or an update (confirmed/shipped/tracking/delay/short-ship) to an existing order?\n' +
-    '- Stage reflects the real lifecycle, do NOT over-advance it: a quote (just a price, no order placed yet) => stage "Draft". Only use "Ordered" when the thread shows an order was actually placed or confirmed (PO issued, "order confirmed", payment made); "Shipped" only with a ship/tracking signal; "Delivered" only when received.\n' +
+    '- Stage reflects the real lifecycle, do NOT over-advance it: a quote (just a price, no order placed yet) => stage "Quoted". Only use "Ordered" when the thread shows an order was actually placed or confirmed (PO issued, "order confirmed", payment made); "Shipped" only with a ship/tracking signal; "Delivered" only when received. (There is also a "Contacted" stage, but that is set by a human in the dashboard when they first reach out — you never emit it; the earliest stage you assign is "Quoted".)\n' +
     '- Fourier part numbers: a number explicitly labeled "FP#", "FP #", or "Fourier P/N" IS the company part number — put it in the line\'s sku verbatim, whether or not it appears in the BOM list above. Any OTHER number near a line (the vendor\'s own SKU/catalog/model number) is NOT the sku.\n' +
     '- If a line has no FP# label, still try to match it to a BOM part number by description; set sku to the matched BOM part number, else "".\n' +
     '- Official POs: only relevant if the memo contains the tag "amur002" (case-insensitive). POs with other project tags => kind "ignore".\n' +
@@ -148,7 +148,7 @@ function extractWithClaude(threadText, docBlocks, data, existingCard, unparsed) 
       summary: { type: 'string', description: 'One-line human summary for the review card' },
       refLabel: { type: 'string', description: 'Human-friendly order ref label, e.g. "Quote #25118"' },
       orderType: { type: 'string', enum: ['Purchase Order', 'Credit Card'] },
-      stage: { type: 'string', enum: ['Draft', 'Ordered', 'Shipped', 'Delivered'] },
+      stage: { type: 'string', enum: ['Quoted', 'Ordered', 'Shipped', 'Delivered'] },
       eta: { type: 'string' }, tracking: { type: 'string' },
       total: { type: 'number' },
       lines: {
@@ -216,7 +216,7 @@ function buildCard(threadId, r, unparsed, lastMsgDate) {
       vendor: r.vendor || '',
       vendorEmail: r.vendorEmail || '',
       category: '',
-      stage: r.stage || 'Draft',
+      stage: r.stage || 'Quoted',
       createdDate: '', eta: r.eta || '', deliveredDate: '',
       terms: '', tracking: r.tracking || '',
       total: r.total || 0,

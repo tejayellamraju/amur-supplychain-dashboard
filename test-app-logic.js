@@ -26,11 +26,18 @@ const restoreEntity = (s, entityType, id) => {
   const arr = s[key].map(item => item.id === id ? { ...item, deleted: false, deletedAt: null, deletedBy: null } : item);
   return { [key]: arr, actionLog: pushLog(s, { action: 'restored', entityType, entityId: id }) };
 };
+const LEGACY_STAGE = { Draft: 'Quoted' };
+const normStage = st => LEGACY_STAGE[st] || st;
+const nrm = x => String(x == null ? '' : x).trim().toLowerCase();
+const skuKey = j => JSON.stringify((((j && j.lines) || []).map(l => l.sku).filter(Boolean)).sort());
 const approvePending = (s, id) => {
   const pend = s.pendingOrders.find(p => p.id === id);
   if (!pend) return null;
-  const existing = pend.draft.poNumber ? s.orders.find(o => o.poNumber === pend.draft.poNumber) : null;
-  const orders = existing ? s.orders.map(o => o.id === existing.id ? { ...o, ...pend.draft, id: o.id } : o) : [...s.orders, { ...pend.draft, id: uid() }];
+  const _d = pend.draft;
+  const _byPo = _d.poNumber ? s.orders.find(o => o.poNumber === _d.poNumber) : null;
+  const _byInflight = _byPo ? null : s.orders.find(o => !o.deleted && INFLIGHT_STAGES.indexOf(o.stage) !== -1 && nrm(o.vendor) === nrm(_d.vendor) && skuKey(o) !== '[]' && skuKey(o) === skuKey(_d));
+  const existing = _byPo || _byInflight;
+  const orders = existing ? s.orders.map(o => o.id === existing.id ? { ...o, ..._d, id: o.id } : o) : [...s.orders, { ..._d, id: uid() }];
   const vendors = s.vendors.some(v => v.name === pend.draft.vendor) ? s.vendors : [...s.vendors, { id: uid(), name: pend.draft.vendor, email: '', terms: pend.draft.terms || '', notes: '' }];
   return { orders, vendors, pendingOrders: s.pendingOrders.filter(p => p.id !== id), actionLog: pushLog(s, { action: 'approved' }) };
 };
@@ -44,12 +51,19 @@ const saveModalOrder = (s, draft, isNew, fromPendingId) => {
     pendingOrders: fromPendingId ? s.pendingOrders.filter(p => p.id !== fromPendingId) : s.pendingOrders
   };
 };
+const INFLIGHT_STAGES = ['Contacted', 'Quoted'];
 const bomWithStats = (state) => state.bom.filter(p => !p.deleted).map(p => {
-  let qtyOrdered = 0;
-  state.orders.filter(o => !o.deleted).forEach(o => (o.lines || []).forEach(l => { if (l.sku === p.partNumber) qtyOrdered += Number(l.qty) || 0; }));
-  const qtyRemaining = Math.max(0, (p.qtyRequired || 0) - qtyOrdered);
-  const status = qtyOrdered <= 0 ? 'Not Started' : qtyOrdered >= p.qtyRequired ? 'Full' : 'Partial';
-  return { ...p, qtyOrdered, qtyRemaining, status };
+  let qtyOrdered = 0, qtyInflight = 0;
+  state.orders.filter(o => !o.deleted).forEach(o => {
+    const inflight = INFLIGHT_STAGES.indexOf(o.stage) !== -1;
+    (o.lines || []).forEach(l => { if (l.sku === p.partNumber) { const q = Number(l.qty) || 0; if (inflight) qtyInflight += q; else qtyOrdered += q; } });
+  });
+  const req = p.qtyRequired || 0;
+  const qtyRemaining = Math.max(0, req - qtyOrdered);
+  const qtyToSource = Math.max(0, req - qtyOrdered - qtyInflight);
+  const _hasDef = p.deficit !== undefined && p.deficit !== null && p.deficit !== ''; const _def = Number(p.deficit);
+  const status = _hasDef ? (_def > 0 ? 'In stock' : _def === 0 ? 'Check MES' : (qtyOrdered <= 0 ? 'Not Started' : qtyOrdered >= req ? 'Full' : 'Partial')) : (req <= 0 ? 'In stock' : qtyOrdered <= 0 ? 'Not Started' : qtyOrdered >= req ? 'Full' : 'Partial');
+  return { ...p, qtyOrdered, qtyInflight, qtyRemaining, qtyToSource, status };
 });
 const vendorsWithStats = (state) => state.vendors.filter(v => !v.deleted).map(v => {
   const vOrders = state.orders.filter(o => o.vendor === v.name && !o.deleted);
@@ -196,6 +210,61 @@ ok('actionLog caps at 200, newest first', () => {
 ok('empty-state safety: stats functions do not throw on empty data', () => {
   assert.deepEqual(bomWithStats({ bom: [], orders: [] }), []);
   assert.deepEqual(vendorsWithStats({ vendors: [], orders: [] }), []);
+});
+
+// ── Contacted → Ordered merge on approve (the real "PO arrives for a part we contacted" flow) ──
+ok('approve merges an incoming PO into a matching Contacted order (no duplicate)', () => {
+  const contacted = { id: 'ord-2', vendor: 'California Hydronics', stage: 'Contacted', poNumber: '', total: 0,
+    lines: [{ sku: '140-00127', qty: 2, total: 0 }, { sku: '140-00402', qty: 1, total: 0 }, { sku: '140-00125', qty: 1, total: 0 }] };
+  const s = { orders: [contacted], vendors: [{ name: 'California Hydronics' }], actionLog: [],
+    pendingOrders: [{ id: 'p1', draft: { vendor: 'California Hydronics', stage: 'Ordered', poNumber: 'PO-10092', total: 26248.95,
+      lines: [{ sku: '140-00127', qty: 2, total: 15031.8 }, { sku: '140-00402', qty: 1, total: 6707.25 }, { sku: '140-00125', qty: 1, total: 4509.9 }] } }] };
+  const r = approvePending(s, 'p1');
+  assert.equal(r.orders.length, 1, 'merged, not duplicated');
+  assert.equal(r.orders[0].id, 'ord-2', 'kept the Contacted order id');
+  assert.equal(r.orders[0].stage, 'Ordered', 'advanced Contacted -> Ordered');
+  assert.equal(r.orders[0].poNumber, 'PO-10092', 'stamped the PO');
+  assert.equal(r.orders[0].total, 26248.95, 'pulled the total');
+});
+
+ok('approve does NOT merge into an already-committed order (only inflight); creates new', () => {
+  const committed = { id: 'ord-9', vendor: 'Acme', stage: 'Ordered', poNumber: 'PO-1', total: 100, lines: [{ sku: 'A', qty: 1 }] };
+  const s = { orders: [committed], vendors: [{ name: 'Acme' }], actionLog: [],
+    pendingOrders: [{ id: 'p2', draft: { vendor: 'Acme', stage: 'Ordered', poNumber: '', total: 50, lines: [{ sku: 'A', qty: 1 }] } }] };
+  const r = approvePending(s, 'p2');
+  assert.equal(r.orders.length, 2, 'a committed order is never silently overwritten by a match');
+});
+
+ok('approve still merges by exact PO# match (original behavior intact)', () => {
+  const s = { orders: [{ id: 'o1', vendor: 'V', stage: 'Ordered', poNumber: 'PO-7', total: 0, lines: [] }], vendors: [{ name: 'V' }], actionLog: [],
+    pendingOrders: [{ id: 'p3', draft: { vendor: 'V', stage: 'Shipped', poNumber: 'PO-7', total: 500, lines: [] } }] };
+  const r = approvePending(s, 'p3');
+  assert.equal(r.orders.length, 1); assert.equal(r.orders[0].id, 'o1'); assert.equal(r.orders[0].stage, 'Shipped');
+});
+
+ok('approve creates a fresh order when nothing matches', () => {
+  const s = { orders: [], vendors: [], actionLog: [], pendingOrders: [{ id: 'p4', draft: { vendor: 'New Co', stage: 'Ordered', poNumber: 'PO-X', total: 10, lines: [{ sku: 'Z', qty: 1 }] } }] };
+  const r = approvePending(s, 'p4');
+  assert.equal(r.orders.length, 1); assert.equal(r.orders[0].poNumber, 'PO-X');
+});
+
+ok('legacy "Draft" stage normalizes to "Quoted" on load', () => {
+  assert.equal(normStage('Draft'), 'Quoted');
+  assert.equal(normStage('Ordered'), 'Ordered', 'non-legacy stages pass through');
+  assert.equal(normStage('Contacted'), 'Contacted');
+});
+
+ok('BOM 3-way status from Deficit: negative=to-order, 0=Check MES, positive=In stock', () => {
+  const mk = (deficit, qtyRequired, ordered) => bomWithStats({ bom: [{ partNumber: 'P', deficit, qtyRequired }],
+    orders: ordered != null ? [{ deleted: false, stage: 'Ordered', lines: [{ sku: 'P', qty: ordered }] }] : [] })[0];
+  assert.equal(mk(5, 0, null).status, 'In stock', 'surplus -> In stock');
+  assert.equal(mk(0, 0, null).status, 'Check MES', 'balanced -> Check MES (verify before ordering)');
+  assert.equal(mk(-3, 3, null).status, 'Not Started', 'shortfall, nothing ordered');
+  assert.equal(mk(-3, 3, 1).status, 'Partial', 'shortfall, partially ordered');
+  assert.equal(mk(-3, 3, 3).status, 'Full', 'shortfall, fully ordered');
+  // a cell-stack part (no deficit field) falls back to classic coverage logic
+  const cell = bomWithStats({ bom: [{ partNumber: 'C', qtyRequired: 100 }], orders: [{ deleted: false, stage: 'Ordered', lines: [{ sku: 'C', qty: 100 }] }] })[0];
+  assert.equal(cell.status, 'Full', 'no-deficit part -> classic coverage, still maps + flags ordered');
 });
 
 console.log('\nALL ' + pass + ' APP-LOGIC TESTS PASS');
