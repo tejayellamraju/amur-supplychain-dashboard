@@ -74,6 +74,16 @@ const vendorsWithStats = (state) => state.vendors.filter(v => !v.deleted).map(v 
   return { ...v, poCount: vOrders.length, spend, onTimePct };
 });
 
+const syncVendorsFromBom = (s) => {
+  const existing = new Set((s.vendors || []).map(v => (v.name || '').trim().toLowerCase()));
+  const names = new Set();
+  (s.bom || []).filter(p => !p.deleted).forEach(p => { [p.preferredVendor, p.alternateVendor].forEach(n => { if (n && String(n).trim()) names.add(String(n).trim()); }); });
+  const toAdd = [...names].filter(n => !existing.has(n.toLowerCase()));
+  if (!toAdd.length) return null;
+  const newVendors = toAdd.map(name => ({ id: uid(), name: name, email: '', terms: '', notes: '' }));
+  return { vendors: [...s.vendors, ...newVendors], actionLog: pushLog(s, { action: 'created', entityType: 'vendor' }) };
+};
+
 let pass = 0;
 const ok = (name, fn) => { fn(); console.log('  ✓ ' + name); pass++; };
 
@@ -265,6 +275,21 @@ ok('BOM 3-way status from Deficit: negative=to-order, 0=Check MES, positive=In s
   // a cell-stack part (no deficit field) falls back to classic coverage logic
   const cell = bomWithStats({ bom: [{ partNumber: 'C', qtyRequired: 100 }], orders: [{ deleted: false, stage: 'Ordered', lines: [{ sku: 'C', qty: 100 }] }] })[0];
   assert.equal(cell.status, 'Full', 'no-deficit part -> classic coverage, still maps + flags ordered');
+});
+
+ok('syncVendorsFromBom adds missing BOM suppliers (case-insensitive dedup), skips existing/deleted', () => {
+  const s = { vendors: [{ name: 'Superlok' }], actionLog: [], bom: [
+    { partNumber: 'A', preferredVendor: 'MCMASTER-CARR', alternateVendor: 'Superlok' },
+    { partNumber: 'B', preferredVendor: 'superlok' },                 // case-insensitive dup of existing -> skip
+    { partNumber: 'C', preferredVendor: 'ZORO', alternateVendor: '' },
+    { partNumber: 'D', preferredVendor: 'MCMASTER-CARR' },            // dup within bom -> once
+    { partNumber: 'E', preferredVendor: 'Deleted Co', deleted: true },// deleted -> ignore
+  ] };
+  const r = syncVendorsFromBom(s);
+  const added = r.vendors.map(v => v.name).filter(n => n !== 'Superlok').sort();
+  assert.deepEqual(added, ['MCMASTER-CARR', 'ZORO'], 'adds only distinct, non-deleted, not-already-present suppliers');
+  assert.equal(r.vendors.length, 3);
+  assert.equal(syncVendorsFromBom({ ...s, vendors: r.vendors }), null, 're-run is idempotent (nothing to add)');
 });
 
 console.log('\nALL ' + pass + ' APP-LOGIC TESTS PASS');
