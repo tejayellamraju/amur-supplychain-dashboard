@@ -76,9 +76,9 @@ const vendorsWithStats = (state) => state.vendors.filter(v => !v.deleted).map(v 
 
 const syncVendorsFromBom = (s) => {
   const existing = new Set((s.vendors || []).map(v => (v.name || '').trim().toLowerCase()));
-  const names = new Set();
-  (s.bom || []).filter(p => !p.deleted).forEach(p => { [p.preferredVendor, p.alternateVendor].forEach(n => { if (n && String(n).trim()) names.add(String(n).trim()); }); });
-  const toAdd = [...names].filter(n => !existing.has(n.toLowerCase()));
+  const nameMap = {};
+  (s.bom || []).filter(p => !p.deleted).forEach(p => { [p.preferredVendor, p.alternateVendor].forEach(n => { if (n && String(n).trim()) { const nm = String(n).trim(); const lk = nm.toLowerCase(); if (!(lk in nameMap)) nameMap[lk] = nm; } }); });
+  const toAdd = Object.keys(nameMap).filter(lk => !existing.has(lk)).map(lk => nameMap[lk]);
   if (!toAdd.length) return null;
   const newVendors = toAdd.map(name => ({ id: uid(), name: name, email: '', terms: '', notes: '' }));
   return { vendors: [...s.vendors, ...newVendors], actionLog: pushLog(s, { action: 'created', entityType: 'vendor' }) };
@@ -290,6 +290,16 @@ ok('syncVendorsFromBom adds missing BOM suppliers (case-insensitive dedup), skip
   assert.deepEqual(added, ['MCMASTER-CARR', 'ZORO'], 'adds only distinct, non-deleted, not-already-present suppliers');
   assert.equal(r.vendors.length, 3);
   assert.equal(syncVendorsFromBom({ ...s, vendors: r.vendors }), null, 're-run is idempotent (nothing to add)');
+});
+
+ok('syncVendorsFromBom collapses case-variant supplier names WITHIN the BOM to one vendor', () => {
+  const s = { vendors: [], actionLog: [], bom: [
+    { partNumber: 'A', preferredVendor: 'IFM' },
+    { partNumber: 'B', preferredVendor: 'ifm' },   // same vendor, different case -> must NOT create a 2nd
+    { partNumber: 'C', preferredVendor: 'IfM' },
+  ] };
+  const r = syncVendorsFromBom(s);
+  assert.equal(r.vendors.length, 1, 'IFM/ifm/IfM collapse to a single vendor');
 });
 
 console.log('\nALL ' + pass + ' APP-LOGIC TESTS PASS');
