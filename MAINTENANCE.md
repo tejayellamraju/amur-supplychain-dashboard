@@ -88,7 +88,22 @@ The robot is plain code you edit in a browser:
 
 ---
 
-## 7. Where everything lives
+## 7. Starting a Claude session — just talk to it plainly
+
+Every session:
+1. Open **Terminal** (`Cmd`+`Space` → `Terminal` → Enter)
+2. `cd /Users/tejayellamraju/my-firebase-app`
+3. `claude`
+4. **Say what you want in plain English.** Claude auto-loads its instructions (`CLAUDE.md`) and already knows how to edit the bundled file safely, run the tests, and preview before going live — you do NOT need to mention file names or steps.
+
+Examples — this is *all* you say:
+- **Change the live app:** "Add the weekday next to the date at the top. Show me a preview first."
+- **Continue the migration:** "Let's keep building the new React app (the migration). Read your notes first. Don't touch the current live app."
+- **New BOM arrives:** "I got a new BOM — convert it into our format and give me the file to import."
+
+Claude handles the *how* (finding the code, the string-surgery edit, tests, preview, push). If you ever want to be extra-safe, just add "preview first, don't push to live yet."
+
+## 8. Where everything lives
 
 - **Code (source of truth):** GitHub → `tejayellamraju/amur-supplychain-dashboard`
 - **On this Mac:** `/Users/tejayellamraju/my-firebase-app`
