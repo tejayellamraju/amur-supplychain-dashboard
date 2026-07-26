@@ -1,5 +1,10 @@
 # MIGRATION — plan + full context (readable by ANY AI tool, not just Claude)
 
+> **UPDATE 2026-07-25: the rewrite described below is BUILT.** It lives at
+> `~/amur-dashboard-v1` (github.com/tejayellamraju/amur-dashboard-v1, private) — read its
+> `HANDOFF.md` for current status and next steps (Phase B: enabling writes). This repo
+> remains the LIVE production app and fallback; the plan below is kept as original context.
+
 If you're an AI tool (Gemini, etc.) or a developer picking this up: read this + `CLAUDE.md` + `MAINTENANCE.md` + `ARCHITECTURE.md` first. Everything you need is in this repo — nothing is locked to Claude.
 
 ## Why migrate
